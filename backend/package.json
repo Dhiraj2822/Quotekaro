@@ -1,0 +1,28 @@
+{
+  "name": "quotekaro-backend",
+  "version": "0.1.0",
+  "description": "Backend REST API for QuoteKaro home services marketplace",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "migrate": "node src/migrations/migrate.js",
+    "seed": "node src/seeds/seed_demo_data.js",
+    "test": "jest --detectOpenHandles --forceExit"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.0",
+    "pg": "^8.23.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.9",
+    "pg-mem": "^3.0.14",
+    "supertest": "^7.0.0"
+  }
+}

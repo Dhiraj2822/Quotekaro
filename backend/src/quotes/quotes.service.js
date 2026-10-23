@@ -55,7 +55,7 @@ function calculateBlendedScores(quotes) {
 async function submitQuote({ jobId, userId, pricePaise, etaMinutes, message }) {
   // 1. Verify provider profile exists and is approved (KYC gate)
   const providerRes = await db.query(
-    'SELECT id, kyc_status, is_available FROM provider_profiles WHERE user_id = $1',
+    'SELECT id, kyc_status, is_available, categories FROM provider_profiles WHERE user_id = $1',
     [userId]
   );
 
@@ -68,7 +68,7 @@ async function submitQuote({ jobId, userId, pricePaise, etaMinutes, message }) {
 
   const providerProfile = providerRes.rows[0];
 
-  // Wallet balance check per 08_TESTING_STRATEGY.md §2.6
+  // Wallet balance check per 08_TESTING_STRATEGY.md §2.6 (checked before availability)
   try {
     const balRes = await db.query(
       'SELECT wallet_balance_paise FROM provider_profiles WHERE user_id = $1',
@@ -86,6 +86,14 @@ async function submitQuote({ jobId, userId, pricePaise, etaMinutes, message }) {
     }
   } catch (err) {
     if (err.code === 'INSUFFICIENT_WALLET_BALANCE') throw err;
+  }
+
+  // Availability check (e.g. provider already has an active booking or marked unavailable)
+  if (providerProfile.is_available === false) {
+    const error = new Error('Provider is currently unavailable or assigned to an active booking');
+    error.statusCode = 400;
+    error.code = 'PROVIDER_UNAVAILABLE';
+    throw error;
   }
 
   // 2. Verify job exists and is open for quotes
@@ -107,6 +115,16 @@ async function submitQuote({ jobId, userId, pricePaise, etaMinutes, message }) {
     error.statusCode = 400;
     error.code = 'JOB_NOT_OPEN';
     throw error;
+  }
+
+  // Verify provider is qualified for this job's category
+  if (providerProfile.categories && Array.isArray(providerProfile.categories)) {
+    if (!providerProfile.categories.includes(job.category)) {
+      const error = new Error(`Provider cannot quote on jobs outside their registered categories (${job.category})`);
+      error.statusCode = 403;
+      error.code = 'CATEGORY_MISMATCH';
+      throw error;
+    }
   }
 
   // Verify price is within category bounds per 07_SECURITY.md §4 & 06_UIUX_SPEC.md §4
@@ -345,6 +363,12 @@ async function acceptQuote({ jobId, quoteId, user }) {
       [job.id]
     );
 
+    // Mark provider as unavailable — they have an active booking now
+    await client.query(
+      `UPDATE provider_profiles SET is_available = false, updated_at = NOW() WHERE id = $1`,
+      [quote.provider_id]
+    );
+
     await client.query('COMMIT');
     return bookingRes.rows[0];
   } catch (err) {
@@ -516,6 +540,11 @@ async function autoMatchUrgentJob(jobId) {
     await client.query(`
       UPDATE jobs SET status = 'booked', updated_at = NOW() WHERE id = $1
     `, [job.id]);
+
+    // Mark provider as unavailable — they are now committed to this booking
+    await client.query(`
+      UPDATE provider_profiles SET is_available = false, updated_at = NOW() WHERE id = $1
+    `, [matchedProvider.id]);
 
     await client.query('COMMIT');
 

@@ -24,8 +24,11 @@ async function handleGetBooking(req, res, next) {
 
 async function handleGetBookings(req, res, next) {
   try {
+    const { limit, offset } = req.query;
     const bookings = await getBookingsForUser({
-      user: req.user
+      user: req.user,
+      limit,
+      offset
     });
     return res.status(200).json({ bookings });
   } catch (err) {

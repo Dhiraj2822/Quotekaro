@@ -89,9 +89,11 @@ async function getBookingById({ bookingId, user }) {
 /**
  * Get list of bookings for the current authenticated user (customer or provider).
  */
-async function getBookingsForUser({ user }) {
+async function getBookingsForUser({ user, limit = 50, offset = 0 } = {}) {
   let query;
   let params;
+  const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 100);
+  const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
 
   if (user.role === 'customer') {
     query = `
@@ -135,8 +137,9 @@ async function getBookingsForUser({ user }) {
       LEFT JOIN quotes q ON b.quote_id = q.id
       WHERE b.customer_id = $1
       ORDER BY b.created_at DESC
+      LIMIT $2 OFFSET $3
     `;
-    params = [user.id];
+    params = [user.id, parsedLimit, parsedOffset];
   } else if (user.role === 'provider') {
     query = `
       SELECT 
@@ -179,8 +182,9 @@ async function getBookingsForUser({ user }) {
       LEFT JOIN quotes q ON b.quote_id = q.id
       WHERE pp.user_id = $1
       ORDER BY b.created_at DESC
+      LIMIT $2 OFFSET $3
     `;
-    params = [user.id];
+    params = [user.id, parsedLimit, parsedOffset];
   } else {
     // Admin: all bookings
     query = `
@@ -223,8 +227,9 @@ async function getBookingsForUser({ user }) {
       JOIN users pu ON pp.user_id = pu.id
       LEFT JOIN quotes q ON b.quote_id = q.id
       ORDER BY b.created_at DESC
+      LIMIT $1 OFFSET $2
     `;
-    params = [];
+    params = [parsedLimit, parsedOffset];
   }
 
   const res = await db.query(query, params);
@@ -346,6 +351,22 @@ async function updateBookingStatus({ bookingId, status, lat, lng, beforePhotoUrl
       `UPDATE jobs SET status = 'cancelled', updated_at = NOW() WHERE id = $1`,
       [currentBooking.job_id]
     );
+    // Restore provider availability if they meet KYC + wallet requirements
+    const provRes = await db.query(
+      `SELECT kyc_status, wallet_balance_paise FROM provider_profiles WHERE id = $1`,
+      [currentBooking.provider_id]
+    );
+    if (provRes.rowCount > 0) {
+      const prov = provRes.rows[0];
+      const minThreshold = parseInt(process.env.PROVIDER_MIN_WALLET_BALANCE_PAISE || '10000', 10);
+      const walletOk = parseInt(prov.wallet_balance_paise || 0, 10) >= minThreshold;
+      if (prov.kyc_status === 'approved' && walletOk) {
+        await db.query(
+          `UPDATE provider_profiles SET is_available = true, updated_at = NOW() WHERE id = $1`,
+          [currentBooking.provider_id]
+        );
+      }
+    }
   }
 
   // Record live GPS ping if coordinates provided with status update
@@ -730,8 +751,17 @@ async function completeBooking({ bookingId, afterPhotoUrl = null, beforePhotoUrl
     bookingPricePaise: pricePaise
   });
 
+  // Restore provider availability after job completion if wallet still sufficient
+  if (!walletResult.belowThreshold) {
+    await db.query(
+      `UPDATE provider_profiles SET is_available = true, updated_at = NOW() WHERE id = $1`,
+      [booking.provider_id]
+    );
+  }
+
   // 7. Clear live location cache
   liveLocationCache.delete(bookingId);
+
 
   // 8. Return formatted updated booking with wallet deduction info
   const updatedBookingRes = await db.query(

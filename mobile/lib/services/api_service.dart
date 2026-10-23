@@ -2,8 +2,15 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // Default URL: localhost for desktop/testing, 10.0.2.2 for Android emulator
-  static String baseUrl = 'http://localhost:4000/api/v1';
+  // Configurable base URL: can be passed via --dart-define=API_BASE_URL=... or overridden at runtime
+  static String baseUrl = const String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://localhost:4000/api/v1',
+  );
+
+  static void setBaseUrl(String url) {
+    baseUrl = url;
+  }
 
   static http.Client client = http.Client();
 

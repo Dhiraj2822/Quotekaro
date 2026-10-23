@@ -155,8 +155,8 @@ async function getNearbyJobs({ category, lat, lng, radius_km, area } = {}, curre
   let searchLng = lng !== undefined && lng !== null ? Number(lng) : null;
   let searchRadius = radius_km !== undefined && radius_km !== null ? Number(radius_km) : 25;
 
-  // If parameters are omitted and request is from a provider, use provider profile defaults
-  if ((!searchCategory || searchLat === null || searchLng === null) && currentUser.role === 'provider') {
+  // If request is from a provider, enforce their profile categories and defaults
+  if (currentUser && currentUser.role === 'provider') {
     const profileRes = await db.query(
       `SELECT * FROM provider_profiles WHERE user_id = $1`,
       [currentUser.id]
@@ -164,9 +164,23 @@ async function getNearbyJobs({ category, lat, lng, radius_km, area } = {}, curre
 
     if (profileRes.rows && profileRes.rows.length > 0) {
       const profile = profileRes.rows[0];
-      if (!searchCategory && profile.categories && profile.categories.length > 0) {
-        searchCategory = profile.categories;
+      const providerCategories = profile.categories || [];
+
+      // If provider has no registered categories, they cannot see any job feed
+      if (providerCategories.length === 0) {
+        return [];
       }
+
+      if (category) {
+        // Enforce that category filter must be one of provider's approved skills
+        if (!providerCategories.includes(category)) {
+          return [];
+        }
+        searchCategory = category;
+      } else {
+        searchCategory = providerCategories;
+      }
+
       if (searchLat === null && profile.base_location_lat != null) {
         searchLat = Number(profile.base_location_lat);
       }
@@ -179,12 +193,12 @@ async function getNearbyJobs({ category, lat, lng, radius_km, area } = {}, curre
     }
   }
 
-  // Query all open jobs
+  // Query jobs eligible for quoting (status 'open' or 'quoted')
   let query = `
     SELECT j.*, u.name as customer_name, u.phone_number as customer_phone
     FROM jobs j
     JOIN users u ON u.id = j.customer_id
-    WHERE j.status = 'open'
+    WHERE j.status IN ('open', 'quoted')
   `;
   const params = [];
 

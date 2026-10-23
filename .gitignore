@@ -36,3 +36,8 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Project docs / AI agent files (not part of codebase)
+PROJECT_GUIDE.md
+00_AGENT_INSTRUCTIONS.md
+[0-9][0-9]_*.md

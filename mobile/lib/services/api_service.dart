@@ -5,7 +5,7 @@ class ApiService {
   // Configurable base URL: can be passed via --dart-define=API_BASE_URL=... or overridden at runtime
   static String baseUrl = const String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:4000/api/v1',
+    defaultValue: 'https://quotekaro-backend.onrender.com/api/v1',
   );
 
   static void setBaseUrl(String url) {

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_BASE_URL } from '../config';
 
 const DEFAULT_BOUNDS = {
   plumbing: { min_price_paise: 10000, max_price_paise: 2000000, icon: '🚰', desc: 'Pipe leakages, tap fittings, flush tanks, sanitary work' },
@@ -47,7 +48,7 @@ export default function CategoryBoundsView({
     setLoading(true);
     try {
       if (backendHealth.status === 'online') {
-        const res = await fetch(`http://localhost:4000/api/v1/admin/category-bounds/${editingCategory}`, {
+        const res = await fetch(`${API_BASE_URL}/admin/category-bounds/${editingCategory}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',

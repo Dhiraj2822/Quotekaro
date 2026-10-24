@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DisputesView from './components/DisputesView';
 import AnalyticsView from './components/AnalyticsView';
 import CategoryBoundsView from './components/CategoryBoundsView';
+import { API_BASE_URL, API_ROOT_URL } from './config';
 
 // Default initial demo providers for seamless local preview and testing
 const INITIAL_DEMO_PROVIDERS = [
@@ -248,7 +249,7 @@ function App() {
 
   // Check Backend Health and fetch live data
   useEffect(() => {
-    fetch('http://localhost:4000/health')
+    fetch(`${API_ROOT_URL}/health`)
       .then((res) => res.json())
       .then((data) => {
         setBackendHealth({ status: 'online', message: `${data.service} is online (${data.status})` });
@@ -265,7 +266,7 @@ function App() {
   const fetchLiveProviders = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:4000/api/v1/admin/providers', {
+      const res = await fetch(`${API_BASE_URL}/admin/providers`, {
         headers: {
           'Authorization': `Bearer ${adminToken}`
         }
@@ -286,7 +287,7 @@ function App() {
   // Fetch disputes from live backend if online
   const fetchLiveDisputes = async () => {
     try {
-      const res = await fetch('http://localhost:4000/api/v1/admin/disputes', {
+      const res = await fetch(`${API_BASE_URL}/admin/disputes`, {
         headers: {
           'Authorization': `Bearer ${adminToken}`
         }
@@ -306,7 +307,7 @@ function App() {
   const fetchLiveAnalytics = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:4000/api/v1/admin/analytics', {
+      const res = await fetch(`${API_BASE_URL}/admin/analytics`, {
         headers: {
           'Authorization': `Bearer ${adminToken}`
         }
@@ -331,7 +332,7 @@ function App() {
     try {
       // Try live API if online
       if (backendHealth.status === 'online') {
-        const res = await fetch(`http://localhost:4000/api/v1/admin/providers/${provider.id}/kyc`, {
+        const res = await fetch(`${API_BASE_URL}/admin/providers/${provider.id}/kyc`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -365,7 +366,7 @@ function App() {
     setLoading(true);
     try {
       if (backendHealth.status === 'online') {
-        const res = await fetch(`http://localhost:4000/api/v1/admin/providers/${rejectModalProvider.id}/kyc`, {
+        const res = await fetch(`${API_BASE_URL}/admin/providers/${rejectModalProvider.id}/kyc`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',

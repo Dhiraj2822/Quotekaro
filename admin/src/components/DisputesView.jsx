@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_BASE_URL } from '../config';
 
 export default function DisputesView({
   disputes,
@@ -42,7 +43,7 @@ export default function DisputesView({
     setLoading(true);
     try {
       if (backendHealth.status === 'online') {
-        const res = await fetch(`http://localhost:4000/api/v1/admin/disputes/${dispute.id}`, {
+        const res = await fetch(`${API_BASE_URL}/admin/disputes/${dispute.id}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -84,7 +85,7 @@ export default function DisputesView({
     setLoading(true);
     try {
       if (backendHealth.status === 'online') {
-        const res = await fetch(`http://localhost:4000/api/v1/admin/disputes/${resolvingDispute.id}`, {
+        const res = await fetch(`${API_BASE_URL}/admin/disputes/${resolvingDispute.id}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',

@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: quotekaro-backend
+    env: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL
+        value: "true"
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: AUTO_MIGRATE
+        value: "true"
+      - key: COMMISSION_RATE_PERCENT
+        value: "10"
+      - key: PROVIDER_MIN_WALLET_BALANCE_PAISE
+        value: "10000"

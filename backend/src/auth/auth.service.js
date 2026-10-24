@@ -59,10 +59,12 @@ async function requestOtp(rawPhone) {
   }
 
   // Generate 6-digit OTP
+  const isDemoOtpAllowed = process.env.ALLOW_DEV_OTP !== 'false';
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = Date.now() + OTP_TTL_MS;
 
   otpStore.set(phoneNumber, { otp, expiresAt });
+  console.log(`[AUTH] OTP generated for ${phoneNumber}: ${otp} (Demo OTP 123456: ${isDemoOtpAllowed ? 'ENABLED' : 'DISABLED'})`);
 
   return { success: true, phoneNumber };
 }
@@ -73,13 +75,13 @@ async function requestOtp(rawPhone) {
 async function verifyOtp(rawPhone, otp, role) {
   const phoneNumber = normalizePhoneNumber(rawPhone);
 
-  // In test/dev environment, allow standard test OTP '123456'
-  const isDevOrTest = process.env.NODE_ENV !== 'production';
+  // Allow standard demo OTP '123456' unless explicitly disabled with ALLOW_DEV_OTP=false
+  const isDemoOtpAllowed = process.env.ALLOW_DEV_OTP !== 'false';
   const stored = otpStore.get(phoneNumber);
 
   const isValidOtp =
     (stored && stored.otp === otp && Date.now() < stored.expiresAt) ||
-    (isDevOrTest && otp === '123456');
+    (isDemoOtpAllowed && otp === '123456');
 
   if (!isValidOtp) {
     const error = new Error('Invalid or expired OTP');

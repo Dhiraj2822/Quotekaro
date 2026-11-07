@@ -249,8 +249,74 @@ function App() {
   // Document Preview Modal State
   const [previewDocUrl, setPreviewDocUrl] = useState(null);
 
-  // Admin JWT Token (can be adjusted by user in dev mode)
-  const [adminToken, setAdminToken] = useState('mock_admin_token');
+  // Admin JWT Token — check localStorage on init, null = show login
+  const [adminToken, setAdminToken] = useState(() => localStorage.getItem('qk_admin_token') || null);
+  
+  // Login flow state
+  const [loginPhone, setLoginPhone] = useState('+919999900000');
+  const [loginOtp, setLoginOtp] = useState('');
+  const [loginStep, setLoginStep] = useState('phone'); // 'phone' | 'otp'
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [manualToken, setManualToken] = useState('');
+
+  const handleSendOtp = async () => {
+    setLoginLoading(true);
+    setLoginError('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/otp/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone_number: loginPhone })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to send OTP');
+      setLoginStep('otp');
+    } catch (err) {
+      setLoginError(err.message || 'Backend unreachable. Use manual token below.');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setLoginLoading(true);
+    setLoginError('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/otp/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone_number: loginPhone, otp: loginOtp })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'OTP verification failed');
+      if (data.token) {
+        localStorage.setItem('qk_admin_token', data.token);
+        setAdminToken(data.token);
+      } else {
+        throw new Error('No token received from server');
+      }
+    } catch (err) {
+      setLoginError(err.message);
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleManualToken = () => {
+    if (manualToken.trim()) {
+      localStorage.setItem('qk_admin_token', manualToken.trim());
+      setAdminToken(manualToken.trim());
+    }
+  };
+
+  const handleAdminLogout = () => {
+    localStorage.removeItem('qk_admin_token');
+    setAdminToken(null);
+    setLoginStep('phone');
+    setLoginOtp('');
+    setLoginError('');
+  };
 
   // Check Backend Health and fetch live data
   useEffect(() => {
@@ -428,6 +494,162 @@ function App() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* LOGIN WALL — shown when adminToken is null */}
+      {!adminToken ? (
+        <div style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(135deg, #1F3864 0%, #2a4a7f 50%, #1a2d52 100%)'
+        }}>
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            padding: '40px',
+            width: '100%',
+            maxWidth: '420px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            margin: '20px'
+          }}>
+            {/* Logo */}
+            <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+              <div style={{
+                width: '56px', height: '56px', borderRadius: '12px',
+                backgroundColor: '#1F3864', display: 'inline-flex',
+                alignItems: 'center', justifyContent: 'center',
+                fontWeight: 'bold', fontSize: '28px', color: '#FFFFFF', marginBottom: '12px'
+              }}>Q</div>
+              <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1F3864', margin: '0 0 4px' }}>
+                QuoteKaro Operations Hub
+              </h1>
+              <p style={{ fontSize: '13px', color: '#6B7280', margin: 0 }}>
+                Administrator Login
+              </p>
+            </div>
+
+            {/* Error */}
+            {loginError && (
+              <div style={{
+                backgroundColor: '#FEE2E2', color: '#991B1B', padding: '10px 14px',
+                borderRadius: '8px', fontSize: '13px', marginBottom: '16px',
+                border: '1px solid #FCA5A5'
+              }}>
+                {loginError}
+              </div>
+            )}
+
+            {loginStep === 'phone' ? (
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
+                  Admin Phone Number
+                </label>
+                <input
+                  type="text"
+                  value={loginPhone}
+                  onChange={(e) => setLoginPhone(e.target.value)}
+                  placeholder="+919999900000"
+                  style={{
+                    width: '100%', padding: '12px 14px', borderRadius: '8px',
+                    border: '1px solid #D1D5DB', fontSize: '15px', marginBottom: '6px',
+                    outline: 'none', boxSizing: 'border-box'
+                  }}
+                />
+                <p style={{ fontSize: '11px', color: '#9CA3AF', margin: '0 0 16px' }}>
+                  Demo: +919999900000 · OTP: 123456
+                </p>
+                <button
+                  onClick={handleSendOtp}
+                  disabled={loginLoading || !loginPhone.trim()}
+                  style={{
+                    width: '100%', padding: '12px', borderRadius: '8px',
+                    backgroundColor: '#1F3864', color: '#FFFFFF', fontWeight: 600,
+                    fontSize: '15px', border: 'none', cursor: 'pointer',
+                    opacity: loginLoading ? 0.7 : 1
+                  }}
+                >
+                  {loginLoading ? 'Sending OTP...' : 'Send OTP →'}
+                </button>
+              </div>
+            ) : (
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
+                  Enter 6-Digit OTP
+                </label>
+                <p style={{ fontSize: '12px', color: '#6B7280', margin: '0 0 8px' }}>
+                  Sent to {loginPhone}
+                </p>
+                <input
+                  type="text"
+                  value={loginOtp}
+                  onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="123456"
+                  maxLength={6}
+                  style={{
+                    width: '100%', padding: '14px', borderRadius: '8px',
+                    border: '1px solid #D1D5DB', fontSize: '24px', letterSpacing: '8px',
+                    textAlign: 'center', marginBottom: '16px',
+                    outline: 'none', boxSizing: 'border-box'
+                  }}
+                />
+                <button
+                  onClick={handleVerifyOtp}
+                  disabled={loginLoading || loginOtp.length !== 6}
+                  style={{
+                    width: '100%', padding: '12px', borderRadius: '8px',
+                    backgroundColor: '#548235', color: '#FFFFFF', fontWeight: 600,
+                    fontSize: '15px', border: 'none', cursor: 'pointer',
+                    opacity: loginLoading ? 0.7 : 1, marginBottom: '10px'
+                  }}
+                >
+                  {loginLoading ? 'Verifying...' : 'Verify OTP & Login ✓'}
+                </button>
+                <button
+                  onClick={() => { setLoginStep('phone'); setLoginOtp(''); setLoginError(''); }}
+                  style={{
+                    width: '100%', padding: '10px', borderRadius: '8px',
+                    backgroundColor: 'transparent', color: '#6B7280', fontWeight: 500,
+                    fontSize: '13px', border: '1px solid #E5E7EB', cursor: 'pointer'
+                  }}
+                >
+                  ← Change Phone Number
+                </button>
+              </div>
+            )}
+
+            {/* Manual token input for offline/dev */}
+            <div style={{ marginTop: '24px', borderTop: '1px solid #E5E7EB', paddingTop: '16px' }}>
+              <p style={{ fontSize: '11px', color: '#9CA3AF', margin: '0 0 8px', textAlign: 'center' }}>
+                Or paste JWT token manually (dev/offline mode)
+              </p>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  value={manualToken}
+                  onChange={(e) => setManualToken(e.target.value)}
+                  placeholder="eyJhbGciOiJIUzI1..."
+                  style={{
+                    flex: 1, padding: '8px 10px', borderRadius: '6px',
+                    border: '1px solid #D1D5DB', fontSize: '12px', outline: 'none'
+                  }}
+                />
+                <button
+                  onClick={handleManualToken}
+                  disabled={!manualToken.trim()}
+                  style={{
+                    padding: '8px 14px', borderRadius: '6px',
+                    backgroundColor: '#374151', color: '#FFFFFF', fontWeight: 600,
+                    fontSize: '12px', border: 'none', cursor: 'pointer'
+                  }}
+                >
+                  Use
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+      <>
       {/* Top Navbar */}
       <header style={{
         backgroundColor: 'var(--primary)',
@@ -477,15 +699,32 @@ function App() {
             <span>{backendHealth.message}</span>
           </div>
 
-          <div style={{
-            fontSize: '12px',
-            backgroundColor: 'var(--accent)',
-            color: '#FFFFFF',
-            padding: '6px 12px',
-            borderRadius: 'var(--radius-btn)',
-            fontWeight: 600
-          }}>
-            Admin: Verified
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{
+              fontSize: '12px',
+              backgroundColor: 'var(--accent)',
+              color: '#FFFFFF',
+              padding: '6px 12px',
+              borderRadius: 'var(--radius-btn)',
+              fontWeight: 600
+            }}>
+              ✓ Admin Authenticated
+            </div>
+            <button
+              onClick={handleAdminLogout}
+              style={{
+                fontSize: '12px',
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                color: '#FFFFFF',
+                padding: '6px 14px',
+                borderRadius: 'var(--radius-btn)',
+                fontWeight: 500,
+                border: '1px solid rgba(255,255,255,0.3)',
+                cursor: 'pointer'
+              }}
+            >
+              Sign Out
+            </button>
           </div>
         </div>
       </header>
@@ -1240,6 +1479,8 @@ function App() {
       }}>
         QuoteKaro Platform Operations • MIT ADT University • PBL 2026
       </footer>
+      </>
+      )}
     </div>
   );
 }

@@ -1069,6 +1069,18 @@ class ApiService {
     return [];
   }
 
+  /// Mark a notification as read
+  static Future<void> markNotificationRead(String notificationId) async {
+    final url = Uri.parse('$baseUrl/notifications/$notificationId/read');
+    await client.patch(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $currentToken',
+      },
+    );
+  }
+
   static void logout() {
     currentToken = null;
     currentUser = null;

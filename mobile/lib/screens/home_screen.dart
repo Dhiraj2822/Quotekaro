@@ -15,6 +15,7 @@ import 'service_details_screen.dart';
 import 'ai_maintenance_screen.dart';
 import 'support_chatbot_screen.dart';
 import 'profile_screen.dart';
+import 'notifications_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -41,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = false;
   List<dynamic> _jobs = [];
   List<dynamic> _bookings = [];
+  int _unreadNotifications = 0;
   String _selectedArea = 'Kothrud, Pune';
 
   final List<String> _puneAreas = [
@@ -69,6 +71,14 @@ class _HomeScreenState extends State<HomeScreen> {
         final jobsFuture = ApiService.getMyJobs();
         final bookingsFuture = ApiService.getMyBookings();
         final results = await Future.wait([jobsFuture, bookingsFuture]);
+
+        // Fetch unread notification count
+        try {
+          final notifs = await ApiService.getNotifications();
+          if (mounted) {
+            _unreadNotifications = notifs.where((n) => n['is_read'] == false).length;
+          }
+        } catch (_) {}
 
         if (!mounted) return;
         setState(() {
@@ -118,6 +128,19 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           if (isCustomer) ...[
+            IconButton(
+              icon: Badge(
+                label: Text('$_unreadNotifications'),
+                isLabelVisible: _unreadNotifications > 0,
+                backgroundColor: Colors.red,
+                child: const Icon(Icons.notifications_outlined, color: Colors.white),
+              ),
+              tooltip: 'Notifications',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => NotificationsScreen(user: widget.user)),
+              ).then((_) => _loadData()),
+            ),
             IconButton(
               icon: const Icon(Icons.smart_toy_outlined, color: Colors.white),
               tooltip: 'QuoteKaro AI Assistant',

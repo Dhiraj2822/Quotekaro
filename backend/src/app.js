@@ -25,7 +25,20 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
-// Health check endpoints
+// Health check & root endpoints
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    service: 'quotekaro-backend',
+    message: 'QuoteKaro API is running',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      apiHealth: '/api/v1/health'
+    }
+  });
+});
+
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',

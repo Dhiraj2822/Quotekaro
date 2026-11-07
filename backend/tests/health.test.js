@@ -2,6 +2,14 @@ const request = require('supertest');
 const app = require('../src/app');
 
 describe('Health Check API', () => {
+  it('GET / returns 200 with status ok and service info', async () => {
+    const res = await request(app).get('/');
+    expect(res.statusCode).toEqual(200);
+    expect(res.body).toHaveProperty('status', 'ok');
+    expect(res.body).toHaveProperty('service', 'quotekaro-backend');
+    expect(res.body).toHaveProperty('message');
+  });
+
   it('GET /health returns 200 with status ok and service name', async () => {
     const res = await request(app).get('/health');
     expect(res.statusCode).toEqual(200);

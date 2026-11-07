@@ -43,3 +43,4 @@ CREATE TABLE IF NOT EXISTS coupons (
 
 CREATE INDEX IF NOT EXISTS idx_coupons_code ON coupons(code);
 CREATE INDEX IF NOT EXISTS idx_coupons_is_active ON coupons(is_active);
+

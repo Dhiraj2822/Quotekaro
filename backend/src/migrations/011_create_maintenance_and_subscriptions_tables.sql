@@ -85,3 +85,4 @@ CREATE TABLE IF NOT EXISTS maintenance_recommendations (
 
 CREATE INDEX IF NOT EXISTS idx_recommendations_user_id ON maintenance_recommendations(user_id);
 CREATE INDEX IF NOT EXISTS idx_recommendations_appliance_id ON maintenance_recommendations(appliance_id);
+

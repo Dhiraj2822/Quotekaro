@@ -243,3 +243,4 @@ class _SupportChatbotScreenState extends State<SupportChatbotScreen> {
     );
   }
 }
+

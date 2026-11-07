@@ -199,3 +199,4 @@ export default function CustomersView({ adminToken, showToast }) {
     </div>
   );
 }
+

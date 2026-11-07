@@ -30,3 +30,4 @@ router.post('/subscription/cancel', handleCancelSubscription);
 router.get('/dashboard', handleGetDashboard);
 
 module.exports = router;
+

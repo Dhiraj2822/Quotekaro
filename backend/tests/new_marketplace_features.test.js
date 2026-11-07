@@ -164,3 +164,4 @@ describe('New Marketplace & AI Home Maintenance Features', () => {
     });
   });
 });
+

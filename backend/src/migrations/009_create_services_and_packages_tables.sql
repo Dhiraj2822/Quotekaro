@@ -66,3 +66,4 @@ CREATE TABLE IF NOT EXISTS service_addons (
 );
 
 CREATE INDEX IF NOT EXISTS idx_service_addons_service_id ON service_addons(service_id);
+

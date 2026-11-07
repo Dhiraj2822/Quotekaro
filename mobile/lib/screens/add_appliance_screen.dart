@@ -283,3 +283,4 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
     );
   }
 }
+

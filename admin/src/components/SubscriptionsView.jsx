@@ -346,3 +346,4 @@ export default function SubscriptionsView({ adminToken, showToast }) {
     </div>
   );
 }
+

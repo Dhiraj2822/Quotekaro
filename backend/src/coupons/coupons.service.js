@@ -94,3 +94,4 @@ module.exports = {
   validateAndApplyCoupon,
   DEFAULT_COUPONS
 };
+

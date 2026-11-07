@@ -91,7 +91,7 @@ async function updateCustomerStatus(userId, isActive) {
       [isActive, userId]
     );
     if (res && res.rows && res.rows[0]) return res.rows[0];
-  } catch (err) {}
+  } catch (err) { }
   return { id: userId, is_active: isActive };
 }
 
@@ -129,7 +129,7 @@ async function getAdminBookings({ status, category, limit = 50, offset = 0 }) {
     query += ` ORDER BY b.created_at DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`;
     const res = await db.query(query, params);
     if (res && res.rows && res.rows.length > 0) return res.rows;
-  } catch (err) {}
+  } catch (err) { }
 
   return [
     {
@@ -190,7 +190,7 @@ async function reassignBookingProvider(bookingId, newProviderId) {
       [newProviderId, bookingId]
     );
     if (res && res.rows && res.rows[0]) return res.rows[0];
-  } catch (err) {}
+  } catch (err) { }
   return { id: bookingId, provider_id: newProviderId, status: 'confirmed' };
 }
 
@@ -255,3 +255,4 @@ module.exports = {
   reassignBookingProvider,
   getAdminSubscriptions
 };
+

@@ -245,3 +245,4 @@ module.exports = {
   verifyStartOtp,
   getDigitalInvoice
 };
+

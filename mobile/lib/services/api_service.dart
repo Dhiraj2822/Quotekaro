@@ -759,6 +759,316 @@ class ApiService {
     }
   }
 
+  /// Fetch service categories from catalog
+  static Future<List<dynamic>> getCategories() async {
+    final url = Uri.parse('$baseUrl/catalog/categories');
+    final response = await client.get(url, headers: {'Content-Type': 'application/json'});
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return data['categories'] ?? [];
+    }
+    return [];
+  }
+
+  /// Fetch services from catalog with optional category and search filters
+  static Future<List<dynamic>> getServices({String? category, String? query, String? sort}) async {
+    var uri = '$baseUrl/catalog/services?';
+    if (category != null && category.isNotEmpty) uri += 'category=$category&';
+    if (query != null && query.isNotEmpty) uri += 'query=${Uri.encodeComponent(query)}&';
+    if (sort != null && sort.isNotEmpty) uri += 'sort=$sort&';
+
+    final url = Uri.parse(uri);
+    final response = await client.get(url, headers: {'Content-Type': 'application/json'});
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return data['services'] ?? [];
+    }
+    return [];
+  }
+
+  /// Fetch full service details with packages and add-ons
+  static Future<Map<String, dynamic>> getServiceDetails(String idOrSlug) async {
+    final url = Uri.parse('$baseUrl/catalog/services/$idOrSlug');
+    final response = await client.get(url, headers: {'Content-Type': 'application/json'});
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return data['service'] ?? {};
+    }
+    throw Exception(data['error']?['message'] ?? 'Service not found');
+  }
+
+  /// Create a direct booking from catalog
+  static Future<Map<String, dynamic>> createDirectBooking(Map<String, dynamic> bookingData) async {
+    final url = Uri.parse('$baseUrl/bookings/direct');
+    final response = await client.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $currentToken',
+      },
+      body: jsonEncode(bookingData),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return data['booking'] ?? {};
+    }
+    throw Exception(data['error']?['message'] ?? 'Failed to place booking');
+  }
+
+  /// Fetch digital tax invoice for a booking
+  static Future<Map<String, dynamic>> getDigitalInvoice(String bookingId) async {
+    final url = Uri.parse('$baseUrl/bookings/$bookingId/invoice');
+    final response = await client.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $currentToken',
+      },
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return data['invoice'] ?? {};
+    }
+    throw Exception(data['error']?['message'] ?? 'Failed to load invoice');
+  }
+
+  /// Reschedule an existing booking
+  static Future<Map<String, dynamic>> rescheduleBooking({
+    required String bookingId,
+    required String scheduledDate,
+    required String timeSlot,
+  }) async {
+    final url = Uri.parse('$baseUrl/bookings/$bookingId/reschedule');
+    final response = await client.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $currentToken',
+      },
+      body: jsonEncode({
+        'scheduled_date': scheduledDate,
+        'time_slot': timeSlot,
+      }),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return data['booking'] ?? {};
+    }
+    throw Exception(data['error']?['message'] ?? 'Failed to reschedule');
+  }
+
+  /// Cancel a booking
+  static Future<Map<String, dynamic>> cancelBooking({
+    required String bookingId,
+    String? reason,
+  }) async {
+    final url = Uri.parse('$baseUrl/bookings/$bookingId/cancel');
+    final response = await client.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $currentToken',
+      },
+      body: jsonEncode({'reason': reason ?? 'Cancelled by customer'}),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return data['booking'] ?? {};
+    }
+    throw Exception(data['error']?['message'] ?? 'Failed to cancel booking');
+  }
+
+  /// Verify service start OTP (Provider action)
+  static Future<Map<String, dynamic>> verifyStartOtp({
+    required String bookingId,
+    required String otp,
+  }) async {
+    final url = Uri.parse('$baseUrl/bookings/$bookingId/verify-start-otp');
+    final response = await client.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $currentToken',
+      },
+      body: jsonEncode({'otp': otp}),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return data['booking'] ?? {};
+    }
+    throw Exception(data['error']?['message'] ?? 'Invalid start OTP');
+  }
+
+  /// Fetch customer saved addresses
+  static Future<List<dynamic>> getAddresses() async {
+    final url = Uri.parse('$baseUrl/addresses');
+    final response = await client.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $currentToken',
+      },
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return data['addresses'] ?? [];
+    }
+    return [];
+  }
+
+  /// Add a new saved address
+  static Future<Map<String, dynamic>> addAddress(Map<String, dynamic> addressData) async {
+    final url = Uri.parse('$baseUrl/addresses');
+    final response = await client.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $currentToken',
+      },
+      body: jsonEncode(addressData),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return data['address'] ?? {};
+    }
+    throw Exception(data['error']?['message'] ?? 'Failed to save address');
+  }
+
+  /// Fetch available coupons
+  static Future<List<dynamic>> getCoupons() async {
+    final url = Uri.parse('$baseUrl/coupons');
+    final response = await client.get(url, headers: {'Content-Type': 'application/json'});
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return data['coupons'] ?? [];
+    }
+    return [];
+  }
+
+  /// Validate & apply a coupon code
+  static Future<Map<String, dynamic>> applyCoupon(String code, int amountPaise) async {
+    final url = Uri.parse('$baseUrl/coupons/apply');
+    final response = await client.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $currentToken',
+      },
+      body: jsonEncode({'code': code, 'amount_paise': amountPaise}),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return data;
+    }
+    throw Exception(data['error']?['message'] ?? 'Invalid coupon code');
+  }
+
+  // --- AI Home Maintenance & Subscriptions ---
+
+  /// Get maintenance dashboard with appliance predictions & active plan
+  static Future<Map<String, dynamic>> getMaintenanceDashboard() async {
+    final url = Uri.parse('$baseUrl/maintenance/dashboard');
+    final response = await client.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $currentToken',
+      },
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return data;
+    }
+    return {};
+  }
+
+  /// Register a new home appliance for AI tracking
+  static Future<Map<String, dynamic>> registerAppliance(Map<String, dynamic> applianceData) async {
+    final url = Uri.parse('$baseUrl/maintenance/appliances');
+    final response = await client.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $currentToken',
+      },
+      body: jsonEncode(applianceData),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return data['appliance'] ?? {};
+    }
+    throw Exception(data['error']?['message'] ?? 'Failed to register appliance');
+  }
+
+  /// Get configurable subscription plans
+  static Future<List<dynamic>> getSubscriptionPlans() async {
+    final url = Uri.parse('$baseUrl/maintenance/plans');
+    final response = await client.get(url, headers: {'Content-Type': 'application/json'});
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return data['plans'] ?? [];
+    }
+    return [];
+  }
+
+  /// Subscribe to a plan (Basic ₹199, Standard ₹499, Premium ₹999)
+  static Future<Map<String, dynamic>> subscribeToPlan({
+    required String planId,
+    String billingCycle = 'monthly',
+  }) async {
+    final url = Uri.parse('$baseUrl/maintenance/subscription/subscribe');
+    final response = await client.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $currentToken',
+      },
+      body: jsonEncode({
+        'plan_id': planId,
+        'billing_cycle': billingCycle,
+      }),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return data['subscription'] ?? {};
+    }
+    throw Exception(data['error']?['message'] ?? 'Subscription failed');
+  }
+
+  // --- AI Chatbot & Customer Support ---
+
+  /// Send prompt to AI Home Services Assistant
+  static Future<String> sendChatbotMessage(String message) async {
+    final url = Uri.parse('$baseUrl/support/chat');
+    final response = await client.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'message': message}),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return data['reply'] ?? '';
+    }
+    throw Exception(data['error']?['message'] ?? 'Support assistant unavailable');
+  }
+
+  /// Get user notifications feed
+  static Future<List<dynamic>> getNotifications() async {
+    final url = Uri.parse('$baseUrl/notifications');
+    final response = await client.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $currentToken',
+      },
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return data['notifications'] ?? [];
+    }
+    return [];
+  }
+
   static void logout() {
     currentToken = null;
     currentUser = null;

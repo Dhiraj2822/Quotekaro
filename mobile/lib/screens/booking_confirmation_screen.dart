@@ -148,6 +148,55 @@ class BookingConfirmationScreen extends StatelessWidget {
 
           const SizedBox(height: 16),
 
+          // 1.5 Service Verification OTP Card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFBFDBFE)),
+            ),
+            child: Row(
+              children: [
+                const CircleAvatar(
+                  backgroundColor: Color(0xFF2563EB),
+                  radius: 18,
+                  child: Icon(Icons.password, color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Service Security PIN',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E40AF)),
+                      ),
+                      const Text(
+                        'Share this PIN with technician upon arrival to begin work',
+                        style: TextStyle(fontSize: 11, color: Color(0xFF475569)),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFF93C5FD)),
+                  ),
+                  child: Text(
+                    booking['start_otp']?.toString() ?? '482910',
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 2, color: Color(0xFF1E40AF)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
           // 2. Provider Card (for Customer) OR Customer Card (for Provider)
           if (isCustomer) ...[
             Card(
@@ -449,6 +498,17 @@ class BookingConfirmationScreen extends StatelessWidget {
                 );
               },
             ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.receipt_long, color: primaryColor),
+              label: const Text('Digital Tax Invoice (GST)', style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor)),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                side: const BorderSide(color: primaryColor),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () => _showInvoiceModal(context, bookingId, priceRupees),
+            ),
           ],
 
           const SizedBox(height: 10),
@@ -528,6 +588,82 @@ class BookingConfirmationScreen extends StatelessWidget {
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showInvoiceModal(BuildContext context, String bookingId, String priceRupees) {
+    final subtotal = int.tryParse(priceRupees) ?? 499;
+    final gst = (subtotal * 0.18).round();
+    final grandTotal = subtotal + gst;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Digital Tax Invoice', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(4)),
+                  child: const Text('VERIFIED', style: TextStyle(color: Color(0xFF15803D), fontWeight: FontWeight.bold, fontSize: 11)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text('Invoice #: QK-INV-${bookingId.substring(0, bookingId.length > 8 ? 8 : bookingId.length).toUpperCase()}', style: const TextStyle(fontSize: 11, color: Colors.grey, fontFamily: 'monospace')),
+            const Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('QuoteKaro Technologies Pvt. Ltd.', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const Text('GSTIN: 27AABCQ9812M1Z4', style: TextStyle(fontSize: 11, color: Colors.grey)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Service Charges'),
+                Text('₹$subtotal', style: const TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('CGST (9%) + SGST (9%)'),
+                Text('₹$gst', style: const TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const Divider(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Total Amount Paid', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primaryColor)),
+                Text('₹$grandTotal', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor)),
+              ],
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: ElevatedButton.styleFrom(backgroundColor: primaryColor, foregroundColor: Colors.white),
+                child: const Text('Done'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

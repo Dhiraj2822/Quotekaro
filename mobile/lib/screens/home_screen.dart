@@ -11,6 +11,10 @@ import 'rating_screen.dart';
 import 'provider_ratings_screen.dart';
 import 'live_tracking_screen.dart';
 import 'chat_screen.dart';
+import 'service_details_screen.dart';
+import 'ai_maintenance_screen.dart';
+import 'support_chatbot_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -113,6 +117,24 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          if (isCustomer) ...[
+            IconButton(
+              icon: const Icon(Icons.smart_toy_outlined, color: Colors.white),
+              tooltip: 'QuoteKaro AI Assistant',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => SupportChatbotScreen(user: widget.user)),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.account_circle_outlined, color: Colors.white),
+              tooltip: 'Profile & Addresses',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => ProfileScreen(user: widget.user, onLogout: widget.onLogout)),
+              ),
+            ),
+          ],
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             tooltip: 'Refresh Data',
@@ -488,7 +510,94 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-        // 4. Four Core Service Categories Grid (2x2) per 06_UIUX_SPEC.md §2
+        // 3.5 AI Home Maintenance Subscription Spotlight Banner
+        Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1F3864), Color(0xFF1E3A8A)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.blue.withValues(alpha: 0.15),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => AiMaintenanceScreen(user: widget.user)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade400,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.auto_awesome, color: Colors.black, size: 14),
+                              SizedBox(width: 4),
+                              Text('UNIQUE FEATURE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.black)),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        const Text('Starts ₹199/mo', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'AI-Powered Home Maintenance Subscription',
+                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Predictive health tracking for AC, RO, Fridge & appliances. Auto-detects wear patterns & includes seasonal scheduled visits.',
+                      style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.3),
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: HomeScreen.accentColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Explore AI Care Plans', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                            SizedBox(width: 4),
+                            Icon(Icons.arrow_forward, size: 14, color: Colors.white),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // 4. Urban Company Service Categories Grid (2x3)
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -498,7 +607,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             TextButton(
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PostJobScreen(onJobCreated: _loadData))),
-              child: const Text('+ Post Job', style: TextStyle(color: HomeScreen.accentColor, fontWeight: FontWeight.bold)),
+              child: const Text('+ Post Custom Job', style: TextStyle(color: HomeScreen.accentColor, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -519,27 +628,39 @@ class _HomeScreenState extends State<HomeScreen> {
               color: const Color(0xFF0284C7),
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => PostJobScreen(initialCategory: 'plumbing', onJobCreated: _loadData)),
+                MaterialPageRoute(
+                  builder: (_) => ServiceDetailsScreen(
+                    service: {
+                      'id': 's-plumb-1',
+                      'name': 'Tap Repair & Mixer Leakage',
+                      'slug': 'tap-repair',
+                      'category_slug': 'plumbing',
+                      'base_price_paise': 19900,
+                      'description': 'Fix dripping taps, replace faulty spindle/cartridges, and resolve water mixer leaks.',
+                    },
+                  ),
+                ),
               ),
             ),
             _buildCategoryCard(
-              title: 'Electrical',
+              title: 'Electrician',
               subtitle: 'Wiring, MCBs, fixtures',
               icon: Icons.electrical_services,
               color: const Color(0xFFEA580C),
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => PostJobScreen(initialCategory: 'electrical', onJobCreated: _loadData)),
-              ),
-            ),
-            _buildCategoryCard(
-              title: 'Painting',
-              subtitle: 'Interior, exterior, texture',
-              icon: Icons.format_paint,
-              color: const Color(0xFF16A34A),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => PostJobScreen(initialCategory: 'painting', onJobCreated: _loadData)),
+                MaterialPageRoute(
+                  builder: (_) => ServiceDetailsScreen(
+                    service: {
+                      'id': 's-elec-1',
+                      'name': 'Ceiling Fan Installation & Repair',
+                      'slug': 'fan-repair',
+                      'category_slug': 'electrician',
+                      'base_price_paise': 19900,
+                      'description': 'Ceiling fan mounting, capacitor replacement, regulator testing, and wobble correction.',
+                    },
+                  ),
+                ),
               ),
             ),
             _buildCategoryCard(
@@ -549,10 +670,133 @@ class _HomeScreenState extends State<HomeScreen> {
               color: const Color(0xFF7C3AED),
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => PostJobScreen(initialCategory: 'cleaning', onJobCreated: _loadData)),
+                MaterialPageRoute(
+                  builder: (_) => ServiceDetailsScreen(
+                    service: {
+                      'id': 's-clean-1',
+                      'name': 'Full Home Deep Cleaning',
+                      'slug': 'full-home-deep-cleaning',
+                      'category_slug': 'cleaning',
+                      'base_price_paise': 249900,
+                      'description': 'Comprehensive top-to-bottom sanitization and deep cleaning of entire apartment or villa.',
+                    },
+                  ),
+                ),
+              ),
+            ),
+            _buildCategoryCard(
+              title: 'Appliance Repair',
+              subtitle: 'AC, RO, Fridge, Washing',
+              icon: Icons.home_repair_service,
+              color: const Color(0xFF059669),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ServiceDetailsScreen(
+                    service: {
+                      'id': 's-app-1',
+                      'name': 'AC Servicing & Gas Charging',
+                      'slug': 'ac-repair-servicing',
+                      'category_slug': 'appliance-repair',
+                      'base_price_paise': 59900,
+                      'description': 'High-pressure jet pump wash, indoor coil cleansing, gas leak diagnosis, and cooling optimization.',
+                    },
+                  ),
+                ),
+              ),
+            ),
+            _buildCategoryCard(
+              title: 'Carpentry',
+              subtitle: 'Doors, locks, furniture',
+              icon: Icons.carpenter,
+              color: const Color(0xFFD97706),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ServiceDetailsScreen(
+                    service: {
+                      'id': 's-carp-1',
+                      'name': 'Door Lock Installation & Repair',
+                      'slug': 'door-repair-lock-installation',
+                      'category_slug': 'carpentry',
+                      'base_price_paise': 29900,
+                      'description': 'Main door lock mortise, latch repair, Godrej lock installation, and door realignment.',
+                    },
+                  ),
+                ),
+              ),
+            ),
+            _buildCategoryCard(
+              title: 'Painting & Other',
+              subtitle: 'Pest control, wall paint',
+              icon: Icons.format_paint,
+              color: const Color(0xFF16A34A),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ServiceDetailsScreen(
+                    service: {
+                      'id': 's-oth-1',
+                      'name': 'Pest Control & Cockroach Gel',
+                      'slug': 'pest-control',
+                      'category_slug': 'other-services',
+                      'base_price_paise': 89900,
+                      'description': 'Odorless Bayer herbal gel treatment for German cockroaches, kitchen pests, and ants.',
+                    },
+                  ),
+                ),
               ),
             ),
           ],
+        ),
+
+        const SizedBox(height: 24),
+
+        // 4.5 Popular Services Direct Booking Row
+        const Text(
+          'Popular Services in Pune',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: HomeScreen.primaryColor),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 130,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              _buildPopularServicePill(
+                title: 'Full Home Deep Clean',
+                price: '₹2,499',
+                rating: '4.88 ★',
+                slug: 'full-home-deep-cleaning',
+                icon: Icons.cleaning_services,
+                color: Colors.purple,
+              ),
+              _buildPopularServicePill(
+                title: 'AC Jet Foam Servicing',
+                price: '₹599',
+                rating: '4.93 ★',
+                slug: 'ac-repair-servicing',
+                icon: Icons.ac_unit,
+                color: Colors.blue,
+              ),
+              _buildPopularServicePill(
+                title: 'Tap Repair & Leak Fix',
+                price: '₹199',
+                rating: '4.89 ★',
+                slug: 'tap-repair',
+                icon: Icons.plumbing,
+                color: Colors.cyan,
+              ),
+              _buildPopularServicePill(
+                title: 'Ceiling Fan Installation',
+                price: '₹199',
+                rating: '4.92 ★',
+                slug: 'fan-repair',
+                icon: Icons.electrical_services,
+                color: Colors.orange,
+              ),
+            ],
+          ),
         ),
 
         const SizedBox(height: 24),
@@ -579,6 +823,99 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPopularServicePill({
+    required String title,
+    required String price,
+    required String rating,
+    required String slug,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      width: 160,
+      margin: const EdgeInsets.only(right: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ServiceDetailsScreen(
+                  service: {
+                    'name': title,
+                    'slug': slug,
+                    'category_slug': 'services',
+                    'base_price_paise': 49900,
+                  },
+                ),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    CircleAvatar(
+                      radius: 14,
+                      backgroundColor: color.withValues(alpha: 0.12),
+                      child: Icon(icon, size: 16, color: color),
+                    ),
+                    Text(
+                      rating,
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber),
+                    ),
+                  ],
+                ),
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: HomeScreen.primaryColor),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      price,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: HomeScreen.accentColor),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: HomeScreen.accentColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text('Book', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: HomeScreen.accentColor)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

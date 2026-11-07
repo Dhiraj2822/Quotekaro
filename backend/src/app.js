@@ -50,6 +50,13 @@ const adminRoutes = require('./admin/admin.routes');
 const jobsRoutes = require('./jobs/jobs.routes');
 const { bookingsRoutes } = require('./bookings');
 const paymentsRoutes = require('./payments/payments.routes');
+const catalogRoutes = require('./catalog/catalog.routes');
+const maintenanceRoutes = require('./maintenance/maintenance.routes');
+const addressesRoutes = require('./addresses/addresses.routes');
+const couponsRoutes = require('./coupons/coupons.routes');
+const supportRoutes = require('./support/support.routes');
+const { notificationsRoutes } = require('./notifications');
+
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/providers', providersRoutes);
@@ -57,6 +64,12 @@ app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/jobs', jobsRoutes);
 app.use('/api/v1/bookings', bookingsRoutes);
 app.use('/api/v1/payments', paymentsRoutes);
+app.use('/api/v1/catalog', catalogRoutes);
+app.use('/api/v1/maintenance', maintenanceRoutes);
+app.use('/api/v1/addresses', addressesRoutes);
+app.use('/api/v1/coupons', couponsRoutes);
+app.use('/api/v1/support', supportRoutes);
+app.use('/api/v1/notifications', notificationsRoutes);
 
 // Photo / media upload endpoint
 app.post('/api/v1/upload', (req, res) => {

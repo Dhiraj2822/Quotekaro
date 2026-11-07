@@ -19,14 +19,72 @@ const {
   handleGetBookingMessages,
   handleCompleteBooking
 } = require('./bookings.controller');
+const {
+  createDirectBooking,
+  rescheduleBooking,
+  cancelBooking,
+  verifyStartOtp,
+  getDigitalInvoice
+} = require('./direct_bookings.service');
 
 router.use(authenticate);
+
+// POST /bookings/direct — Create direct catalog booking
+router.post('/direct', async (req, res, next) => {
+  try {
+    const booking = await createDirectBooking(req.user, req.body);
+    res.status(201).json({ booking });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // GET /bookings — List user's bookings
 router.get('/', handleGetBookings);
 
 // GET /bookings/:id — Get details of a specific booking
 router.get('/:id', handleGetBooking);
+
+// GET /bookings/:id/invoice — Digital tax invoice
+router.get('/:id/invoice', async (req, res, next) => {
+  try {
+    const invoice = await getDigitalInvoice(req.user, req.params.id);
+    res.status(200).json({ invoice });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /bookings/:id/reschedule — Reschedule appointment
+router.post('/:id/reschedule', async (req, res, next) => {
+  try {
+    const booking = await rescheduleBooking(req.user, req.params.id, req.body);
+    res.status(200).json({ booking });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /bookings/:id/cancel — Cancel booking
+router.post('/:id/cancel', async (req, res, next) => {
+  try {
+    const booking = await cancelBooking(req.user, req.params.id, req.body);
+    res.status(200).json({ booking });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /bookings/:id/verify-start-otp — Provider marks job started with customer OTP
+router.post('/:id/verify-start-otp', async (req, res, next) => {
+  try {
+    const { otp } = req.body;
+    const booking = await verifyStartOtp(req.user, req.params.id, otp);
+    res.status(200).json({ booking });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // PATCH /bookings/:id/status — Update status (e.g. en_route, in_progress) per 05_API_SPEC.md
 router.patch('/:id/status', validate(updateBookingStatusSchema), handleUpdateBookingStatus);

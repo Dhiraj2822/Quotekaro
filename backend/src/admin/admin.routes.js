@@ -39,6 +39,76 @@ router.get('/analytics', handleGetAnalytics);
 
 // Category Bounds Management per 06_UIUX_SPEC.md §4.4 & 07_SECURITY.md §4
 const { getCategoryBounds, updateCategoryBounds } = require('./category_bounds.service');
+const {
+  getAdminCustomers,
+  updateCustomerStatus,
+  getAdminBookings,
+  reassignBookingProvider,
+  getAdminSubscriptions
+} = require('./admin_management.service');
+const { getAvailableCoupons } = require('../coupons/coupons.service');
+
+// Customers Management
+router.get('/customers', async (req, res, next) => {
+  try {
+    const { search, status, limit, offset } = req.query;
+    const customers = await getAdminCustomers({ search, status, limit, offset });
+    res.status(200).json({ count: customers.length, customers });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/customers/:id/status', async (req, res, next) => {
+  try {
+    const { is_active } = req.body;
+    const result = await updateCustomerStatus(req.params.id, is_active);
+    res.status(200).json({ success: true, customer: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Bookings Management
+router.get('/bookings', async (req, res, next) => {
+  try {
+    const { status, category, limit, offset } = req.query;
+    const bookings = await getAdminBookings({ status, category, limit, offset });
+    res.status(200).json({ count: bookings.length, bookings });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/bookings/:id/assign', async (req, res, next) => {
+  try {
+    const { provider_id } = req.body;
+    const result = await reassignBookingProvider(req.params.id, provider_id);
+    res.status(200).json({ success: true, booking: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// AI Maintenance & Subscriptions Management
+router.get('/subscriptions', async (req, res, next) => {
+  try {
+    const data = await getAdminSubscriptions();
+    res.status(200).json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Marketing & Coupons Management
+router.get('/coupons', async (req, res, next) => {
+  try {
+    const coupons = await getAvailableCoupons();
+    res.status(200).json({ count: coupons.length, coupons });
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.get('/category-bounds', (req, res) => {
   const bounds = getCategoryBounds();

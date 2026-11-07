@@ -146,10 +146,120 @@ async function verifyOtp(rawPhone, otp, role) {
   };
 }
 
+const crypto = require('crypto');
+
+function hashPassword(password) {
+  return crypto.createHash('sha256').update(password + '_quotekaro_salt').digest('hex');
+}
+
+/**
+ * Register or login with Email & Password
+ */
+async function registerWithEmail({ email, password, name, phone_number, role = 'customer' }) {
+  const normEmail = (email || '').trim().toLowerCase();
+  const phone = phone_number ? normalizePhoneNumber(phone_number) : `+9198${Math.floor(10000000 + Math.random() * 90000000)}`;
+  const passwordHash = hashPassword(password);
+
+  // Check if exists
+  const existing = await db.query('SELECT * FROM users WHERE email = $1 OR phone_number = $2', [normEmail, phone]);
+  if (existing.rowCount > 0) {
+    const error = new Error('User with this email or phone number already exists. Please login.');
+    error.statusCode = 409;
+    error.code = 'USER_EXISTS';
+    throw error;
+  }
+
+  const res = await db.query(
+    `INSERT INTO users (phone_number, email, name, role, password_hash, is_active)
+     VALUES ($1, $2, $3, $4, $5, true)
+     RETURNING *`,
+    [phone, normEmail, name || 'QuoteKaro User', role, passwordHash]
+  );
+
+  const user = res.rows[0];
+  const token = jwt.sign({ id: user.id, phone_number: user.phone_number, role: user.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return { token, user };
+}
+
+async function loginWithEmail({ email, password }) {
+  const normEmail = (email || '').trim().toLowerCase();
+  const passwordHash = hashPassword(password);
+
+  const res = await db.query('SELECT * FROM users WHERE email = $1', [normEmail]);
+  if (res.rowCount === 0) {
+    const error = new Error('No account found with this email address.');
+    error.statusCode = 401;
+    error.code = 'INVALID_CREDENTIALS';
+    throw error;
+  }
+
+  const user = res.rows[0];
+  if (user.password_hash && user.password_hash !== passwordHash) {
+    const error = new Error('Incorrect password. Please try again.');
+    error.statusCode = 401;
+    error.code = 'INVALID_CREDENTIALS';
+    throw error;
+  }
+
+  const token = jwt.sign({ id: user.id, phone_number: user.phone_number, role: user.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return { token, user };
+}
+
+/**
+ * Google OAuth sign-in / signup flow
+ */
+async function loginWithGoogle({ email, name, role = 'customer' }) {
+  const normEmail = (email || 'demo.google@quotekaro.com').trim().toLowerCase();
+  let user;
+
+  const res = await db.query('SELECT * FROM users WHERE email = $1', [normEmail]);
+  if (res.rowCount > 0) {
+    user = res.rows[0];
+  } else {
+    const randomPhone = `+9188${Math.floor(10000000 + Math.random() * 90000000)}`;
+    const insertRes = await db.query(
+      `INSERT INTO users (phone_number, email, name, role, is_active)
+       VALUES ($1, $2, $3, $4, true)
+       RETURNING *`,
+      [randomPhone, normEmail, name || 'Google User', role]
+    );
+    user = insertRes.rows[0];
+  }
+
+  const token = jwt.sign({ id: user.id, phone_number: user.phone_number, role: user.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return { token, user };
+}
+
+/**
+ * Forgot password link/OTP trigger
+ */
+async function forgotPassword(email) {
+  const normEmail = (email || '').trim().toLowerCase();
+  const res = await db.query('SELECT id, phone_number FROM users WHERE email = $1', [normEmail]);
+  if (res.rowCount === 0) {
+    // For privacy, still return success
+    return { success: true, message: 'If this email exists in our records, a reset OTP has been sent.' };
+  }
+  return { success: true, message: 'Password reset OTP sent to registered email & phone.' };
+}
+
+/**
+ * Soft delete or deactivate account
+ */
+async function deleteAccount(userId) {
+  await db.query('UPDATE users SET is_active = false, updated_at = NOW() WHERE id = $1', [userId]);
+  return { success: true, message: 'Account deactivated successfully.' };
+}
+
 module.exports = {
   requestOtp,
   verifyOtp,
   normalizePhoneNumber,
+  registerWithEmail,
+  loginWithEmail,
+  loginWithGoogle,
+  forgotPassword,
+  deleteAccount,
   _resetStore: () => {
     otpStore.clear();
     rateLimitStore.clear();

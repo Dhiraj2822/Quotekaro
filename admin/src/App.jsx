@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import DisputesView from './components/DisputesView';
 import AnalyticsView from './components/AnalyticsView';
 import CategoryBoundsView from './components/CategoryBoundsView';
+import CustomersView from './components/CustomersView';
+import ServicesCatalogView from './components/ServicesCatalogView';
+import BookingsManagementView from './components/BookingsManagementView';
+import SubscriptionsView from './components/SubscriptionsView';
+import MarketingCouponsView from './components/MarketingCouponsView';
 import { API_BASE_URL, API_ROOT_URL } from './config';
 
 // Default initial demo providers for seamless local preview and testing
@@ -491,12 +496,17 @@ function App() {
         borderBottom: '1px solid var(--border-color)',
         padding: '0 32px'
       }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', gap: '8px' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', gap: '4px', overflowX: 'auto' }}>
           {[
-            { id: 'kyc', label: '1. Provider KYC Queue', badge: pendingCount, active: true },
-            { id: 'disputes', label: '2. Disputes', badge: openDisputesCount, badgeColor: 'var(--danger)' },
-            { id: 'analytics', label: '3. Platform Analytics', badge: null, tag: 'City-Wise' },
-            { id: 'pricing', label: '4. Category Bounds', badge: null, tag: 'Config' }
+            { id: 'kyc', label: '1. Provider KYC', badge: pendingCount },
+            { id: 'customers', label: '2. Customers', badge: null },
+            { id: 'services', label: '3. Services Catalog', badge: null, tag: 'Catalog' },
+            { id: 'bookings', label: '4. Bookings & Dispatch', badge: null, tag: 'Live' },
+            { id: 'subscriptions', label: '5. AI Maintenance & Plans', badge: null, tag: 'AI Core' },
+            { id: 'coupons', label: '6. Marketing & Coupons', badge: null },
+            { id: 'disputes', label: '7. Disputes', badge: openDisputesCount, badgeColor: 'var(--danger)' },
+            { id: 'analytics', label: '8. Analytics', badge: null, tag: 'City-Wise' },
+            { id: 'pricing', label: '9. Category Bounds', badge: null, tag: 'Config' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -954,6 +964,30 @@ function App() {
               </div>
             )}
           </div>
+        ) : activeTab === 'customers' ? (
+          <CustomersView
+            adminToken={adminToken}
+            showToast={showToast}
+          />
+        ) : activeTab === 'services' ? (
+          <ServicesCatalogView
+            showToast={showToast}
+          />
+        ) : activeTab === 'bookings' ? (
+          <BookingsManagementView
+            adminToken={adminToken}
+            showToast={showToast}
+          />
+        ) : activeTab === 'subscriptions' ? (
+          <SubscriptionsView
+            adminToken={adminToken}
+            showToast={showToast}
+          />
+        ) : activeTab === 'coupons' ? (
+          <MarketingCouponsView
+            adminToken={adminToken}
+            showToast={showToast}
+          />
         ) : activeTab === 'disputes' ? (
           <DisputesView
             disputes={disputes}

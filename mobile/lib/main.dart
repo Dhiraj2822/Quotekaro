@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'services/api_service.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   runApp(const QuoteKaroApp());
@@ -10,6 +11,7 @@ void main() {
 class QuoteKaroApp extends StatefulWidget {
   const QuoteKaroApp({super.key});
 
+  // Legacy color constants kept so existing screens that reference them compile
   static const Color primaryColor = Color(0xFF1F3864);
   static const Color accentColor = Color(0xFF548235);
   static const Color warningColor = Color(0xFFBF8F00);
@@ -44,28 +46,9 @@ class _QuoteKaroAppState extends State<QuoteKaroApp> {
     return MaterialApp(
       title: 'QuoteKaro',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: QuoteKaroApp.primaryColor,
-          primary: QuoteKaroApp.primaryColor,
-          secondary: QuoteKaroApp.accentColor,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: QuoteKaroApp.primaryColor,
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        cardTheme: CardThemeData(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFFE2E8F0)),
-          ),
-          color: Colors.white,
-        ),
-      ),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: ThemeMode.system,
       builder: (context, child) {
         return Container(
           color: const Color(0xFF0F172A),
@@ -75,7 +58,7 @@ class _QuoteKaroAppState extends State<QuoteKaroApp> {
               child: Container(
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: Theme.of(context).scaffoldBackgroundColor,
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.3),

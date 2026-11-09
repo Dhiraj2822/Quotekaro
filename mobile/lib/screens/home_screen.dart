@@ -3,6 +3,7 @@ import '../services/api_service.dart';
 import 'provider_kyc_screen.dart';
 import 'post_job_screen.dart';
 import 'provider_job_feed_screen.dart';
+import 'provider_dashboard_screen.dart'; // NEW redesigned provider dashboard
 import 'quote_comparison_screen.dart';
 import 'booking_confirmation_screen.dart';
 import 'payment_screen.dart';
@@ -104,8 +105,18 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final role = widget.user['role'] ?? 'customer';
     final isCustomer = role == 'customer';
+
+    // ── Provider users get the fully-redesigned dashboard ─────────────────
+    if (!isCustomer) {
+      return ProviderDashboardScreen(
+        user: widget.user,
+        token: widget.token,
+        onLogout: widget.onLogout,
+      );
+    }
+
     final phone = widget.user['phone_number'] ?? '';
-    final name = widget.user['name'] ?? (isCustomer ? 'Customer User' : 'Service Partner');
+    final name = widget.user['name'] ?? 'Customer User';
 
     return Scaffold(
       appBar: AppBar(
@@ -267,7 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- PROFILE HEADER CARD (Preserves exact widget test expectations) ---
+  // --- PROFILE HEADER CARD (Customer) ---
   Widget _buildUserProfileCard(String name, String phone, dynamic role, bool isCustomer) {
     return Card(
       elevation: 0,
@@ -277,70 +288,74 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: HomeScreen.primaryColor,
-                  child: Text(
-                    name.isNotEmpty ? name[0].toUpperCase() : 'U',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: HomeScreen.primaryColor,
+              child: Text(
+                name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: HomeScreen.primaryColor),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 3),
+                  Row(
                     children: [
-                      Text(
-                        name,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: HomeScreen.primaryColor),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        phone,
-                        style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                      const Icon(Icons.location_on_outlined,
+                          size: 13, color: Color(0xFF64748B)),
+                      const SizedBox(width: 3),
+                      Flexible(
+                        child: Text(
+                          'Pune, Maharashtra',
+                          style: const TextStyle(
+                              fontSize: 12, color: Color(0xFF64748B)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isCustomer
-                        ? HomeScreen.accentColor.withValues(alpha: 0.12)
-                        : HomeScreen.primaryColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    role.toString().toUpperCase(),
-                    style: TextStyle(
-                      color: isCustomer ? HomeScreen.accentColor : HomeScreen.primaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-            const Divider(height: 24),
-            Row(
-              children: [
-                const Icon(Icons.verified_user_outlined, size: 16, color: HomeScreen.accentColor),
-                const SizedBox(width: 6),
-                const Text(
-                  'Session Active (JWT Token Verified)',
-                  style: TextStyle(fontSize: 12, color: HomeScreen.accentColor, fontWeight: FontWeight.w600),
+            const SizedBox(width: 8),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isCustomer
+                    ? HomeScreen.accentColor.withValues(alpha: 0.12)
+                    : HomeScreen.primaryColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                role.toString().toUpperCase(),
+                style: TextStyle(
+                  color: isCustomer
+                      ? HomeScreen.accentColor
+                      : HomeScreen.primaryColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
                 ),
-                const Spacer(),
-                Text(
-                  'Pune, Maharashtra',
-                  style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
-                ),
-              ],
+              ),
             ),
           ],
         ),
@@ -1478,7 +1493,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ===========================================================================
-  // PROVIDER OPERATIONS TAB (For Service Partners)
+  // PROVIDER OPERATIONS (Legacy – providers now use ProviderDashboardScreen)
+  // Kept for fallback / testing. All developer text removed.
   // ===========================================================================
   Widget _buildProviderOperations() {
     final providerProfileId = widget.user['provider_profile_id'] ?? widget.user['id'] ?? '';
@@ -1487,16 +1503,15 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Provider Operations (06_UIUX_SPEC.md §3)',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: HomeScreen.primaryColor),
+          'Partner Tools',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: HomeScreen.primaryColor),
         ),
         const SizedBox(height: 8),
 
         _buildFeatureTile(
           Icons.document_scanner_outlined,
-          'KYC Verification & Service Area',
+          'KYC & Service Area',
           'Upload ID proof, select categories & radius',
-          'Module 2',
           () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const ProviderKycScreen()),
@@ -1504,9 +1519,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         _buildFeatureTile(
           Icons.work_outline,
-          'Nearby Job Leads',
+          'Nearby Leads',
           'Live bidding feed matching your category',
-          'Module 3',
           () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const ProviderJobFeedScreen()),
@@ -1514,9 +1528,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         _buildFeatureTile(
           Icons.assignment_turned_in_outlined,
-          'My Assigned Bookings',
+          'My Bookings',
           'Accepted jobs & customer location details',
-          'Module 4',
           () async {
             try {
               final bookings = await ApiService.getMyBookings();
@@ -1546,9 +1559,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         _buildFeatureTile(
           Icons.account_balance_wallet_outlined,
-          'Partner Wallet & Commission',
+          'Wallet & Earnings',
           'Prepaid balance, 10% deductions & top-ups',
-          'Module 6',
           () {
             Navigator.push(
               context,
@@ -1560,9 +1572,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         _buildFeatureTile(
           Icons.star_rate_outlined,
-          'Reputation & 3-Axis Scores',
-          'Honesty, Punctuality, Quality ratings dashboard',
-          'Module 7',
+          'My Ratings',
+          'Honesty, Punctuality, Quality dashboard',
           () {
             Navigator.push(
               context,
@@ -1576,7 +1587,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildFeatureTile(IconData icon, String title, String subtitle, String moduleTag, VoidCallback? onTap) {
+  Widget _buildFeatureTile(IconData icon, String title, String subtitle, VoidCallback? onTap) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -1587,23 +1598,9 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(moduleTag, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF475569))),
-            ),
-            if (onTap != null) ...[
-              const SizedBox(width: 6),
-              const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
-            ],
-          ],
-        ),
+        trailing: onTap != null
+            ? const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey)
+            : null,
       ),
     );
   }

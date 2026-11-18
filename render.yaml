@@ -29,3 +29,9 @@ services:
         value: "10"
       - key: PROVIDER_MIN_WALLET_BALANCE_PAISE
         value: "10000"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false

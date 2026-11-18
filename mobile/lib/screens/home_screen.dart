@@ -113,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final role = widget.user['role'] ?? 'customer';
     final isCustomer = role == 'customer';
 
-    // â”€â”€ Provider users get the fully-redesigned dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Provider users get the fully-redesigned dashboard ─────────────────
     if (!isCustomer) {
       return ProviderDashboardScreen(
         user: widget.user,
@@ -430,7 +430,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. City / Service Area Picker per 06_UIUX_SPEC.md Â§2
+        // 1. City / Service Area Picker per 06_UIUX_SPEC.md §2
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
@@ -480,7 +480,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         const SizedBox(height: 16),
 
-        // 2. Emergency Instant Routing CTA (03_SYSTEM_DESIGN.md Â§4 & 06_UIUX_SPEC.md Â§2)
+        // 2. Emergency Instant Routing CTA (03_SYSTEM_DESIGN.md §4 & 06_UIUX_SPEC.md §2)
         Container(
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -533,7 +533,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const Spacer(),
-                        const Text('âš¡ Rapid Auto-Match', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                        const Text('⚡ Rapid Auto-Match', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -670,7 +670,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const Spacer(),
-                        const Text('Starts â‚¹199/mo', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                        const Text('Starts ₹199/mo', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -734,7 +734,7 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisCount: 2,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            mainAxisExtent: 110, // fixed px height â€“ no overflow
+            mainAxisExtent: 110, // fixed px height — no overflow
           ),
           itemCount: 6,
           itemBuilder: (ctx, index) {
@@ -772,32 +772,32 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _buildPopularServicePill(
                 title: 'Full Home Deep Clean',
-                price: 'â‚¹2,499',
-                rating: '4.88 â˜…',
+                price: '₹2,499',
+                rating: '4.88 ★',
                 slug: 'full-home-deep-cleaning',
                 icon: Icons.cleaning_services,
                 color: Colors.purple,
               ),
               _buildPopularServicePill(
                 title: 'AC Jet Foam Servicing',
-                price: 'â‚¹599',
-                rating: '4.93 â˜…',
+                price: '₹599',
+                rating: '4.93 ★',
                 slug: 'ac-repair-servicing',
                 icon: Icons.ac_unit,
                 color: Colors.blue,
               ),
               _buildPopularServicePill(
                 title: 'Tap Repair & Leak Fix',
-                price: 'â‚¹199',
-                rating: '4.89 â˜…',
+                price: '₹199',
+                rating: '4.89 ★',
                 slug: 'tap-repair',
                 icon: Icons.plumbing,
                 color: Colors.cyan,
               ),
               _buildPopularServicePill(
                 title: 'Ceiling Fan Installation',
-                price: 'â‚¹199',
-                rating: '4.92 â˜…',
+                price: '₹199',
+                rating: '4.92 ★',
                 slug: 'fan-repair',
                 icon: Icons.electrical_services,
                 color: Colors.orange,
@@ -818,7 +818,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('ðŸ›¡ï¸ How QuoteKaro Protects Homeowners', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: HomeScreen.primaryColor)),
+                const Text('🛡️ How QuoteKaro Protects Homeowners', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: HomeScreen.primaryColor)),
                 const SizedBox(height: 8),
                 _buildValuePropRow(Icons.balance, 'Blended Scoring', 'Quality & honesty are balanced with price so cheap outliers don\'t win unfairly.'),
                 const SizedBox(height: 6),
@@ -1000,7 +1000,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Get Quotes â†’',
+                'Get Quotes →',
                 style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color),
               ),
             ],
@@ -1095,7 +1095,7 @@ class _HomeScreenState extends State<HomeScreen> {
     String statusLabel = 'OPEN FOR BIDS';
     if (status == 'quoted') {
       statusColor = HomeScreen.accentColor;
-      statusLabel = 'âš¡ QUOTES RECEIVED';
+      statusLabel = '⚡ QUOTES RECEIVED';
     } else if (status == 'booked' || status == 'in_progress') {
       statusColor = Colors.orange.shade800;
       statusLabel = 'ASSIGNED & BOOKED';
@@ -1311,7 +1311,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Total Amount: â‚¹$priceRupees', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: HomeScreen.primaryColor)),
+                Text('Total Amount: ₹$priceRupees', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: HomeScreen.primaryColor)),
                 Text('Payment: ${booking['payment_method'] ?? 'Pending'}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
               ],
             ),
@@ -1389,7 +1389,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ===========================================================================
-  // PROVIDER OPERATIONS (Legacy â€“ providers now use ProviderDashboardScreen)
+  // PROVIDER OPERATIONS (Legacy — providers now use ProviderDashboardScreen)
   // Kept for fallback / testing. All developer text removed.
   // ===========================================================================
   Widget _buildProviderOperations() {

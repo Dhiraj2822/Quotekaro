@@ -1467,35 +1467,57 @@ function App() {
                   textAlign: 'center',
                   marginBottom: '16px'
                 }}>
-                  {previewDocUrl && (previewDocUrl.match(/\.(jpg|jpeg|png|webp|gif)$/i) || previewDocUrl.startsWith('data:image')) ? (
-                    <div>
-                      <img
-                        src={previewDocUrl}
-                        alt="KYC Document Preview"
-                        style={{
-                          maxWidth: '100%',
-                          maxHeight: '260px',
-                          borderRadius: '8px',
-                          border: '1px solid #E2E8F0',
-                          objectFit: 'contain',
-                          marginBottom: '8px'
-                        }}
-                      />
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', wordBreak: 'break-all' }}>
-                        {previewDocUrl}
+                  {(() => {
+                    const safeUrl = previewDocUrl ? previewDocUrl.replace(/^http:\/\/quotekaro-backend\.onrender\.com/, 'https://quotekaro-backend.onrender.com') : '';
+                    const isImg = safeUrl && (safeUrl.match(/\.(jpg|jpeg|png|webp|gif)$/i) || safeUrl.startsWith('data:image'));
+                    return isImg ? (
+                      <div>
+                        <img
+                          src={safeUrl}
+                          alt="KYC Document Preview"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            const fallback = e.target.parentElement.querySelector('.doc-fallback');
+                            if (fallback) fallback.style.display = 'block';
+                          }}
+                          style={{
+                            maxWidth: '100%',
+                            maxHeight: '260px',
+                            borderRadius: '8px',
+                            border: '1px solid #E2E8F0',
+                            objectFit: 'contain',
+                            marginBottom: '8px'
+                          }}
+                        />
+                        <div className="doc-fallback" style={{ display: 'none', padding: '20px 0' }}>
+                          <div style={{ fontSize: '40px', marginBottom: '8px' }}>📄</div>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
+                            Attached KYC Document
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            Document uploaded by provider.
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', wordBreak: 'break-all', marginTop: '6px' }}>
+                          <a href={safeUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-light)', textDecoration: 'underline' }}>
+                            Open Document in New Tab ↗
+                          </a>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <div style={{ fontSize: '48px', marginBottom: '8px' }}>📄</div>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
-                        KYC Government Document Verified
+                    ) : (
+                      <div>
+                        <div style={{ fontSize: '48px', marginBottom: '8px' }}>📄</div>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
+                          KYC Government Document Verified
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', wordBreak: 'break-all', marginBottom: '8px' }}>
+                          <a href={safeUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-light)', textDecoration: 'underline' }}>
+                            {safeUrl} ↗
+                          </a>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', wordBreak: 'break-all', marginBottom: '8px' }}>
-                        {previewDocUrl}
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>

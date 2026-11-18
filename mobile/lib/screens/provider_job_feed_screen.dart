@@ -20,6 +20,7 @@ class _ProviderJobFeedScreenState extends State<ProviderJobFeedScreen> {
 
   List<dynamic> _jobs = [];
   bool _isLoading = false;
+  final Set<String> _quotedJobIds = {};
 
   String _selectedCategory = 'all';
   int _selectedRadiusKm = 20;
@@ -232,14 +233,56 @@ class _ProviderJobFeedScreenState extends State<ProviderJobFeedScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            onPressed: () {
+            onPressed: () async {
+              final price = int.tryParse(priceController.text.trim());
+              if (price == null || price <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a valid price in Rupees')),
+                );
+                return;
+              }
+              final eta = int.tryParse(etaController.text.trim()) ?? 30;
+              final msg = messageController.text.trim();
+              final jobId = job['id']?.toString() ?? '';
+
               Navigator.pop(ctx);
+
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Quote of ₹${priceController.text} submitted! (Module 4 feature)'),
-                  backgroundColor: accentColor,
+                const SnackBar(
+                  content: Text('Submitting quote...'),
+                  duration: Duration(seconds: 1),
                 ),
               );
+
+              try {
+                await ApiService.submitQuote(
+                  jobId: jobId,
+                  pricePaise: price * 100,
+                  etaMinutes: eta,
+                  message: msg.isNotEmpty ? msg : null,
+                );
+                if (mounted) {
+                  setState(() {
+                    _quotedJobIds.add(jobId);
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Quote of ₹$price submitted successfully!'),
+                      backgroundColor: accentColor,
+                    ),
+                  );
+                  _fetchJobs();
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to submit quote: ${e.toString().replaceFirst("Exception: ", "")}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('Submit Quote'),
           ),
@@ -494,34 +537,67 @@ class _ProviderJobFeedScreenState extends State<ProviderJobFeedScreen> {
                                     const Divider(height: 24),
 
                                     // Action Button
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          isUrgent ? '⚡ Fast Response Auto-Match' : 'Open for Quotations',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: isUrgent ? warningColor : const Color(0xFF64748B),
+                                    Builder(builder: (context) {
+                                      final jobId = job['id']?.toString() ?? '';
+                                      final hasQuoted = _quotedJobIds.contains(jobId) || job['has_quoted'] == true;
+
+                                      return Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            hasQuoted
+                                                ? '✓ Quote Submitted'
+                                                : (isUrgent ? '⚡ Fast Response Auto-Match' : 'Open for Quotations'),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: hasQuoted
+                                                  ? accentColor
+                                                  : (isUrgent ? warningColor : const Color(0xFF64748B)),
+                                            ),
                                           ),
-                                        ),
-                                        ElevatedButton.icon(
-                                          key: Key('quote_button_$idx'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: isUrgent ? warningColor : primaryColor,
-                                            foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                          ),
-                                          icon: const Icon(Icons.send, size: 14),
-                                          label: Text(
-                                            isUrgent ? 'Accept Urgent Job' : 'Submit Quote',
-                                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                                          ),
-                                          onPressed: () => _showQuoteDialog(job),
-                                        ),
-                                      ],
-                                    ),
+                                          hasQuoted
+                                              ? Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFDCFCE7),
+                                                    borderRadius: BorderRadius.circular(8),
+                                                    border: Border.all(color: const Color(0xFF86EFAC)),
+                                                  ),
+                                                  child: const Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Icon(Icons.check_circle, size: 14, color: Color(0xFF16A34A)),
+                                                      SizedBox(width: 4),
+                                                      Text(
+                                                        'Quoted ✓',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: Color(0xFF16A34A),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                )
+                                              : ElevatedButton.icon(
+                                                  key: Key('quote_button_$idx'),
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: isUrgent ? warningColor : primaryColor,
+                                                    foregroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                  ),
+                                                  icon: const Icon(Icons.send, size: 14),
+                                                  label: Text(
+                                                    isUrgent ? 'Accept Urgent Job' : 'Submit Quote',
+                                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                                  ),
+                                                  onPressed: () => _showQuoteDialog(job),
+                                                ),
+                                        ],
+                                      );
+                                    }),
                                   ],
                                 ),
                               ),

@@ -64,7 +64,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 TextField(
                   controller: nameCtrl,
                   decoration: InputDecoration(
-                    hintText: 'Enter full name',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
@@ -76,7 +75,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   controller: emailCtrl,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    hintText: 'Enter email address',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
@@ -87,7 +85,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 TextField(
                   controller: cityCtrl,
                   decoration: InputDecoration(
-                    hintText: 'Enter city or operational area',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),

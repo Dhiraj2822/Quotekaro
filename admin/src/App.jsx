@@ -258,7 +258,6 @@ function App() {
   const [loginStep, setLoginStep] = useState('email'); // 'email' | 'otp'
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
-  const [manualToken, setManualToken] = useState('');
 
   const friendlyAdminError = (err) => {
     const msg = err?.message || '';
@@ -330,13 +329,6 @@ function App() {
       setLoginError(friendlyAdminError(err));
     } finally {
       setLoginLoading(false);
-    }
-  };
-
-  const handleManualToken = () => {
-    if (manualToken.trim()) {
-      localStorage.setItem('qk_admin_token', manualToken.trim());
-      setAdminToken(manualToken.trim());
     }
   };
 
@@ -592,7 +584,6 @@ function App() {
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSendEmailOtp()}
-                  placeholder="Enter admin email"
                   autoComplete="email"
                   style={{
                     width: '100%', padding: '12px 14px', borderRadius: '8px',
@@ -629,7 +620,6 @@ function App() {
                   value={loginOtp}
                   onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   onKeyDown={(e) => e.key === 'Enter' && loginOtp.length === 6 && handleVerifyEmailOtp()}
-                  placeholder="••••••"
                   maxLength={6}
                   autoComplete="one-time-code"
                   style={{
@@ -663,36 +653,6 @@ function App() {
                 </button>
               </div>
             )}
-
-            {/* Manual token input for offline/dev */}
-            <div style={{ marginTop: '24px', borderTop: '1px solid #E5E7EB', paddingTop: '16px' }}>
-              <p style={{ fontSize: '11px', color: '#9CA3AF', margin: '0 0 8px', textAlign: 'center' }}>
-                Or paste JWT token manually (dev/offline mode)
-              </p>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input
-                  type="text"
-                  value={manualToken}
-                  onChange={(e) => setManualToken(e.target.value)}
-                  placeholder="Paste admin JWT token"
-                  style={{
-                    flex: 1, padding: '8px 10px', borderRadius: '6px',
-                    border: '1px solid #D1D5DB', fontSize: '12px', outline: 'none'
-                  }}
-                />
-                <button
-                  onClick={handleManualToken}
-                  disabled={!manualToken.trim()}
-                  style={{
-                    padding: '8px 14px', borderRadius: '6px',
-                    backgroundColor: '#374151', color: '#FFFFFF', fontWeight: 600,
-                    fontSize: '12px', border: 'none', cursor: 'pointer'
-                  }}
-                >
-                  Use
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       ) : (

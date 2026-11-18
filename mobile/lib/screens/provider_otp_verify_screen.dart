@@ -159,7 +159,6 @@ class _ProviderOtpVerifyScreenState extends State<ProviderOtpVerifyScreen> {
                 color: ProviderOtpVerifyScreen.primaryColor,
               ),
               decoration: InputDecoration(
-                hintText: '••••••',
                 counterText: '',
                 filled: true,
                 fillColor: Colors.white,

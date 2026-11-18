@@ -328,8 +328,6 @@ class _CartCheckoutScreenState extends State<CartCheckoutScreen> {
                     controller: _couponController,
                     textCapitalization: TextCapitalization.characters,
                     decoration: InputDecoration(
-                      hintText: 'Enter coupon code',
-                      hintStyle: const TextStyle(fontSize: 12),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     ),

@@ -31,7 +31,6 @@ class _PostJobScreenState extends State<PostJobScreen> {
   String _urgencyType = 'planned'; // 'planned' | 'urgent'
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _areaController = TextEditingController(text: 'Kothrud, Pune');
-  final TextEditingController _newPhotoUrlController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
 
   double _lat = 18.5074;
@@ -61,17 +60,12 @@ class _PostJobScreenState extends State<PostJobScreen> {
     super.initState();
     _selectedCategory = widget.initialCategory ?? 'plumbing';
     _urgencyType = widget.initialUrgent ? 'urgent' : 'planned';
-    // Provide a starter sample photo for testing convenience
-    if (_selectedCategory == 'painting' || _selectedCategory == 'cleaning') {
-      _photoUrls.add('https://storage.quotekaro.com/jobs/sample_wall.jpg');
-    }
   }
 
   @override
   void dispose() {
     _descriptionController.dispose();
     _areaController.dispose();
-    _newPhotoUrlController.dispose();
     super.dispose();
   }
 
@@ -119,11 +113,10 @@ class _PostJobScreenState extends State<PostJobScreen> {
         } catch (uploadErr) {
           if (mounted) {
             setState(() {
-              _photoUrls.add('https://storage.quotekaro.com/jobs/${_selectedCategory}_photo_${_photoUrls.length + 1}.jpg');
               _isUploadingPhoto = false;
             });
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Photo added to job!')),
+              const SnackBar(content: Text('Failed to upload photo. Please check your connection and try again.')),
             );
           }
         }
@@ -132,41 +125,10 @@ class _PostJobScreenState extends State<PostJobScreen> {
       if (mounted) {
         setState(() => _isUploadingPhoto = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not access camera/files: $e')),
+          const SnackBar(content: Text('Could not access camera/files. Please grant permission.')),
         );
       }
     }
-  }
-
-  void _addPhotoUrl() {
-    final url = _newPhotoUrlController.text.trim();
-    if (url.isEmpty || !url.startsWith('http')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid HTTP/HTTPS image URL')),
-      );
-      return;
-    }
-    if (_photoUrls.length >= 5) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Maximum 5 photos allowed per job')),
-      );
-      return;
-    }
-
-    setState(() {
-      _photoUrls.add(url);
-      _newPhotoUrlController.clear();
-      _errorMessage = null;
-    });
-  }
-
-  void _addSamplePhoto() {
-    if (_photoUrls.length >= 5) return;
-    final sampleUrl = 'https://storage.quotekaro.com/jobs/${_selectedCategory}_photo_${_photoUrls.length + 1}.jpg';
-    setState(() {
-      _photoUrls.add(sampleUrl);
-      _errorMessage = null;
-    });
   }
 
   Future<void> _submitJob() async {
@@ -393,9 +355,6 @@ class _PostJobScreenState extends State<PostJobScreen> {
                     setState(() {
                       _selectedCategory = cat['id'];
                       _errorMessage = null;
-                      if ((_selectedCategory == 'painting' || _selectedCategory == 'cleaning') && _photoUrls.isEmpty) {
-                        _photoUrls.add('https://storage.quotekaro.com/jobs/${_selectedCategory}_sample.jpg');
-                      }
                     });
                   },
                   borderRadius: BorderRadius.circular(12),
@@ -522,7 +481,6 @@ class _PostJobScreenState extends State<PostJobScreen> {
               controller: _descriptionController,
               maxLines: 3,
               decoration: const InputDecoration(
-                hintText: 'Describe the issue or requirements in detail',
                 border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
               ),
               validator: (val) {
@@ -668,40 +626,6 @@ class _PostJobScreenState extends State<PostJobScreen> {
                 ),
               ),
             ],
-
-            const SizedBox(height: 10),
-            // Quick sample or direct URL fallback
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _newPhotoUrlController,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter image URL',
-                      labelText: 'Image URL',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      isDense: true,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                IconButton.filledTonal(
-                  icon: const Icon(Icons.add, size: 18),
-                  tooltip: 'Add URL',
-                  onPressed: _addPhotoUrl,
-                ),
-                const SizedBox(width: 4),
-                OutlinedButton(
-                  onPressed: _addSamplePhoto,
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('Sample', style: TextStyle(fontSize: 11)),
-                ),
-              ],
-            ),
 
             const SizedBox(height: 20),
 

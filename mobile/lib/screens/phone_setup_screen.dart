@@ -53,7 +53,7 @@ class _PhoneSetupScreenState extends State<PhoneSetupScreen> {
     if (!_indianPhoneRegex.hasMatch(digits)) {
       setState(() {
         _errorMessage =
-            'Please enter a valid 10-digit Indian mobile number (starting with 6, 7, 8 or 9)';
+            'Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.';
       });
       return;
     }
@@ -72,10 +72,27 @@ class _PhoneSetupScreenState extends State<PhoneSetupScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = e.toString().replaceFirst('Exception: ', '');
+          _errorMessage = _friendlyError(e);
         });
       }
     }
+  }
+
+  String _friendlyError(Object e) {
+    final raw = e.toString().replaceFirst('Exception: ', '');
+    if (raw.contains('already linked') || raw.contains('PHONE_ALREADY_EXISTS')) {
+      return 'This mobile number is already linked to another account. Please use a different number.';
+    }
+    if (raw.contains('network') || raw.contains('SocketException') || raw.contains('Connection')) {
+      return 'Could not connect to the server. Please check your internet connection and try again.';
+    }
+    if (raw.contains('timeout')) {
+      return 'The request timed out. Please try again.';
+    }
+    if (raw.length < 150 && !raw.contains('Exception') && !raw.contains('Error:')) {
+      return raw;
+    }
+    return 'Something went wrong. Please try again or contact support if the problem continues.';
   }
 
   void _handleSkip() {

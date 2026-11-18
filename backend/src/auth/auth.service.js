@@ -109,7 +109,7 @@ async function verifyOtp(rawPhone, otp, role) {
     user = existingUserRes.rows[0];
 
     if (!user.is_active) {
-      const error = new Error('User account is deactivated');
+      const error = new Error('Your account has been deactivated. Please contact support at support@quotekaro.com for assistance.');
       error.statusCode = 403;
       error.code = 'ACCOUNT_DEACTIVATED';
       throw error;
@@ -327,7 +327,7 @@ async function verifyEmailOtp(rawEmail, otp, role = 'customer') {
   if (existingRes.rows && existingRes.rows.length > 0) {
     user = existingRes.rows[0];
     if (!user.is_active) {
-      const error = new Error('User account is deactivated');
+      const error = new Error('Your account has been deactivated. Please contact support at support@quotekaro.com for assistance.');
       error.statusCode = 403;
       error.code = 'ACCOUNT_DEACTIVATED';
       throw error;
@@ -427,7 +427,7 @@ async function linkPhoneNumber(userId, rawPhone) {
   );
 
   if (updateRes.rows.length === 0) {
-    const error = new Error('User not found');
+    const error = new Error('We could not find your account. Please sign in again.');
     error.statusCode = 404;
     error.code = 'NOT_FOUND';
     throw error;

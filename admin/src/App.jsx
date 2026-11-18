@@ -260,6 +260,30 @@ function App() {
   const [loginError, setLoginError] = useState('');
   const [manualToken, setManualToken] = useState('');
 
+  const friendlyAdminError = (err) => {
+    const msg = err?.message || '';
+    if (msg.includes('Rate limit') || msg.includes('Too many')) {
+      return 'Too many attempts. Please wait a moment before trying again.';
+    }
+    if (msg.includes('Invalid') || msg.includes('expired')) {
+      return 'The code you entered is incorrect or has expired. Please request a new code.';
+    }
+    if (msg.includes('deactivated')) {
+      return 'This account has been deactivated. Please contact your system administrator.';
+    }
+    if (msg.includes('admin access') || msg.includes('admin-registered')) {
+      return 'Access denied. This email is not registered as an admin account.';
+    }
+    if (msg.includes('No token')) {
+      return 'Sign-in failed. Please try again.';
+    }
+    if (msg.includes('fetch') || msg.includes('NetworkError') || msg.includes('Failed to fetch')) {
+      return 'Could not reach the server. Please check your connection and try again.';
+    }
+    if (msg.length < 150 && !msg.includes('Error:')) return msg;
+    return 'Something went wrong. Please try again or use the manual token below.';
+  };
+
   const handleSendEmailOtp = async () => {
     if (!loginEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail.trim())) {
       setLoginError('Please enter a valid email address.');
@@ -277,7 +301,7 @@ function App() {
       if (!res.ok) throw new Error(data.error?.message || data.message || 'Failed to send OTP');
       setLoginStep('otp');
     } catch (err) {
-      setLoginError(err.message || 'Backend unreachable. Use manual token below.');
+      setLoginError(friendlyAdminError(err));
     } finally {
       setLoginLoading(false);
     }
@@ -303,7 +327,7 @@ function App() {
       localStorage.setItem('qk_admin_token', token);
       setAdminToken(token);
     } catch (err) {
-      setLoginError(err.message);
+      setLoginError(friendlyAdminError(err));
     } finally {
       setLoginLoading(false);
     }

@@ -193,26 +193,77 @@ async function getNearbyJobs({ category, lat, lng, radius_km, area } = {}, curre
     }
   }
 
-  // Query jobs eligible for quoting (status 'open' or 'quoted')
-  let query = `
-    SELECT j.*, u.name as customer_name, u.phone_number as customer_phone
-    FROM jobs j
-    JOIN users u ON u.id = j.customer_id
-    WHERE j.status IN ('open', 'quoted')
-  `;
-  const params = [];
+  // Resolve provider profile id for has_quoted detection
+  let providerProfileId = null;
+  if (currentUser && currentUser.role === 'provider') {
+    try {
+      const ppRes = await db.query(`SELECT id FROM provider_profiles WHERE user_id = $1`, [currentUser.id]);
+      if (ppRes.rows && ppRes.rows.length > 0) providerProfileId = ppRes.rows[0].id;
+    } catch (_) {}
+  }
 
-  if (searchCategory) {
-    if (Array.isArray(searchCategory)) {
-      query += ` AND j.category = ANY($${params.length + 1})`;
-      params.push(searchCategory);
-    } else {
-      query += ` AND j.category = $${params.length + 1}`;
-      params.push(searchCategory);
+  // Query jobs eligible for quoting (status 'open' or 'quoted')
+  // Try joining quotes if providerProfileId is present to mark has_quoted; fallback if quotes table doesn't exist (e.g. unit tests)
+  let query = null;
+  let params = [];
+  let res = null;
+
+  if (providerProfileId) {
+    try {
+      query = `
+        SELECT j.*, u.name as customer_name, u.phone_number as customer_phone,
+          CASE WHEN q.id IS NOT NULL THEN true ELSE false END AS has_quoted
+        FROM jobs j
+        JOIN users u ON u.id = j.customer_id
+        LEFT JOIN quotes q ON q.job_id = j.id AND q.provider_id = $1
+        WHERE j.status IN ('open', 'quoted')
+      `;
+      params = [providerProfileId];
+
+      if (searchCategory) {
+        if (Array.isArray(searchCategory)) {
+          query += ` AND j.category = ANY($${params.length + 1})`;
+          params.push(searchCategory);
+        } else {
+          query += ` AND j.category = $${params.length + 1}`;
+          params.push(searchCategory);
+        }
+      }
+
+      res = await db.query(query, params);
+    } catch (err) {
+      if (err.message && err.message.includes('quotes')) {
+        query = null;
+        res = null;
+      } else {
+        throw err;
+      }
     }
   }
 
-  const res = await db.query(query, params);
+  if (!res) {
+    query = `
+      SELECT j.*, u.name as customer_name, u.phone_number as customer_phone,
+        false AS has_quoted
+      FROM jobs j
+      JOIN users u ON u.id = j.customer_id
+      WHERE j.status IN ('open', 'quoted')
+    `;
+    params = [];
+
+    if (searchCategory) {
+      if (Array.isArray(searchCategory)) {
+        query += ` AND j.category = ANY($${params.length + 1})`;
+        params.push(searchCategory);
+      } else {
+        query += ` AND j.category = $${params.length + 1}`;
+        params.push(searchCategory);
+      }
+    }
+
+    res = await db.query(query, params);
+  }
+
   let jobs = res.rows || [];
 
   // Filter and sort by distance if geographic center is provided

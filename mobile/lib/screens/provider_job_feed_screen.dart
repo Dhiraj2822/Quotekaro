@@ -38,73 +38,6 @@ class _ProviderJobFeedScreenState extends State<ProviderJobFeedScreen> {
 
   final List<int> _radiusOptions = [10, 20, 35, 50];
 
-  // Default demo jobs for local testing / offline state
-  final List<Map<String, dynamic>> _demoJobs = [
-    {
-      'id': 'job-001',
-      'category': 'plumbing',
-      'urgency_type': 'urgent',
-      'description': 'Emergency bathroom pipe burst! Water spraying under the basin cabinet, need immediate repair.',
-      'photo_urls': ['https://storage.quotekaro.com/jobs/burst_pipe_1.jpg'],
-      'area': 'Kothrud, Pune',
-      'distance_km': 2.4,
-      'status': 'open',
-      'customer_name': 'Priya S.',
-      'created_at': '12 mins ago'
-    },
-    {
-      'id': 'job-002',
-      'category': 'plumbing',
-      'urgency_type': 'planned',
-      'description': 'Install new diverter and two shower heads in master bathroom. Fittings already purchased.',
-      'photo_urls': ['https://storage.quotekaro.com/jobs/fittings_1.jpg'],
-      'area': 'Shivajinagar, Pune',
-      'distance_km': 3.8,
-      'status': 'open',
-      'customer_name': 'Rahul K.',
-      'created_at': '45 mins ago'
-    },
-    {
-      'id': 'job-003',
-      'category': 'electrical',
-      'urgency_type': 'urgent',
-      'description': 'Main MCB tripping repeatedly when AC is switched on. Burning smell near fuse box.',
-      'photo_urls': ['https://storage.quotekaro.com/jobs/mcb_box.jpg'],
-      'area': 'Kothrud, Pune',
-      'distance_km': 1.8,
-      'status': 'open',
-      'customer_name': 'Anand M.',
-      'created_at': '25 mins ago'
-    },
-    {
-      'id': 'job-004',
-      'category': 'painting',
-      'urgency_type': 'planned',
-      'description': 'Interior repaint of 2 BHK living room and passage. Looking for quotes including primer.',
-      'photo_urls': [
-        'https://storage.quotekaro.com/jobs/living_wall.jpg',
-        'https://storage.quotekaro.com/jobs/passage_wall.jpg'
-      ],
-      'area': 'Baner, Pune',
-      'distance_km': 6.5,
-      'status': 'open',
-      'customer_name': 'Sneha D.',
-      'created_at': '2 hours ago'
-    },
-    {
-      'id': 'job-005',
-      'category': 'cleaning',
-      'urgency_type': 'planned',
-      'description': 'Deep cleaning for move-in: Kitchen cabinets, 2 bathrooms, balcony floor scrubbing.',
-      'photo_urls': ['https://storage.quotekaro.com/jobs/kitchen_balcony.jpg'],
-      'area': 'Hadapsar, Pune',
-      'distance_km': 11.2,
-      'status': 'open',
-      'customer_name': 'Vikas T.',
-      'created_at': '3 hours ago'
-    }
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -129,34 +62,20 @@ class _ProviderJobFeedScreenState extends State<ProviderJobFeedScreen> {
       );
 
       if (!mounted) return;
-      if (nearbyList.isNotEmpty) {
-        setState(() {
-          _jobs = nearbyList;
-          _isLoading = false;
-        });
-      } else {
-        // Use demo fallback if server returns empty list
-        setState(() {
-          _jobs = _filterDemoJobs();
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (!mounted) return;
-      // Fallback to local demo list on network failure
       setState(() {
-        _jobs = _filterDemoJobs();
+        _jobs = nearbyList; // show real data, even if empty
         _isLoading = false;
       });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _jobs = []; // on error show empty, not stale demo data
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not load jobs: ${e.toString().replaceFirst("Exception: ", "")}'), duration: const Duration(seconds: 3)),
+      );
     }
-  }
-
-  List<Map<String, dynamic>> _filterDemoJobs() {
-    return _demoJobs.where((j) {
-      final matchCat = _selectedCategory == 'all' || j['category'] == _selectedCategory;
-      final matchRadius = (j['distance_km'] as num).toDouble() <= _selectedRadiusKm;
-      return matchCat && matchRadius;
-    }).toList();
   }
 
   void _showQuoteDialog(Map<String, dynamic> job) {

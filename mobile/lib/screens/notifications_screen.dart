@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import 'chat_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -51,6 +52,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   IconData _getNotifIcon(String? type) {
     switch (type) {
+      case 'chat':
+        return Icons.chat_bubble_outline;
       case 'booking':
         return Icons.receipt_long;
       case 'maintenance':
@@ -68,6 +71,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Color _getNotifColor(String? type) {
     switch (type) {
+      case 'chat':
+        return Colors.teal;
       case 'booking':
         return NotificationsScreen.primaryColor;
       case 'maintenance':
@@ -143,7 +148,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: _notifications.length,
-                    separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
+                    separatorBuilder: (_, _) => Divider(height: 1, color: Colors.grey.shade200),
                     itemBuilder: (context, index) {
                       final n = _notifications[index];
                       final isRead = n['is_read'] == true;
@@ -153,6 +158,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       return InkWell(
                         onTap: () {
                           if (!isRead && id.isNotEmpty) _markAsRead(id, index);
+                          final meta = n['metadata'];
+                          final bookingId = meta is Map ? meta['booking_id']?.toString() : null;
+                          if (bookingId != null && bookingId.isNotEmpty) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ChatScreen(
+                                  bookingId: bookingId,
+                                  otherParticipantName: n['title']?.toString().replaceFirst('New message from ', '') ?? 'Chat',
+                                  currentUserRole: widget.user['role']?.toString() ?? 'customer',
+                                ),
+                              ),
+                            );
+                          }
                         },
                         child: Container(
                           color: isRead ? Colors.white : const Color(0xFFF0F7FF),
@@ -175,7 +194,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 width: 40,
                                 height: 40,
                                 decoration: BoxDecoration(
-                                  color: _getNotifColor(type).withOpacity(0.12),
+                                  color: _getNotifColor(type).withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Icon(_getNotifIcon(type), color: _getNotifColor(type), size: 20),
@@ -196,7 +215,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     ),
                                     const SizedBox(height: 3),
                                     Text(
-                                      n['message']?.toString() ?? '',
+                                      n['body']?.toString() ?? n['message']?.toString() ?? '',
                                       style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,

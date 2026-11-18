@@ -559,6 +559,22 @@ async function createBookingMessage({ bookingId, message, user }) {
 
   const row = insertRes.rows[0];
 
+  // Fire-and-forget in-app notification to the other party
+  try {
+    const { notificationsService } = require('../notifications');
+    const recipientId = user.role === 'provider'
+      ? booking.customer_id
+      : booking.provider_user_id;
+    const senderLabel = user.name || (user.role === 'provider' ? 'Service Partner' : 'Customer');
+    const preview = sanitizedText.length > 60 ? sanitizedText.substring(0, 60) + '...' : sanitizedText;
+    notificationsService.createNotification(recipientId, {
+      title: `New message from ${senderLabel}`,
+      body: preview,
+      type: 'chat',
+      metadata: { booking_id: bookingId }
+    }).catch(() => {});
+  } catch (_) {}
+
   return {
     id: row.id,
     booking_id: row.booking_id,

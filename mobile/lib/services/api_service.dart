@@ -614,6 +614,7 @@ class ApiService {
   static Future<Map<String, dynamic>> completeBooking({
     required String bookingId,
     String? afterPhotoUrl,
+    String? beforePhotoUrl,
   }) async {
     final url = Uri.parse('$baseUrl/bookings/$bookingId/complete');
     final response = await client.post(
@@ -623,7 +624,8 @@ class ApiService {
         'Authorization': 'Bearer $currentToken',
       },
       body: jsonEncode({
-        if (afterPhotoUrl != null) 'after_photo_url': afterPhotoUrl,
+        'after_photo_url': ?afterPhotoUrl,
+        'before_photo_url': ?beforePhotoUrl,
       }),
     );
 
@@ -767,8 +769,8 @@ class ApiService {
         'Authorization': 'Bearer $currentToken',
       },
       body: jsonEncode({
-        if (beforePhotoUrl != null) 'before_photo_url': beforePhotoUrl,
-        if (afterPhotoUrl != null) 'after_photo_url': afterPhotoUrl,
+        'before_photo_url': ?beforePhotoUrl,
+        'after_photo_url': ?afterPhotoUrl,
       }),
     );
 

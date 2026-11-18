@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import '../services/api_service.dart';
 import 'chat_screen.dart';
@@ -33,7 +36,6 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
   double? _distanceKm;
   bool _isLoading = true;
   bool _isUpdatingStatus = false;
-  String? _errorMessage;
   Timer? _trackingTimer;
 
   @override
@@ -82,10 +84,9 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
         if (track['status'] != null) _status = track['status'].toString().toLowerCase();
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
         _isLoading = false;
       });
     }
@@ -216,6 +217,346 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showCompleteWorkModal() {
+    XFile? beforeImage;
+    XFile? afterImage;
+    bool isUploading = false;
+    String statusNote = '';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (bottomSheetContext) {
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            Future<void> pickImage(bool isBefore, ImageSource source) async {
+              try {
+                final picker = ImagePicker();
+                final picked = await picker.pickImage(
+                  source: source,
+                  maxWidth: 1600,
+                  maxHeight: 1600,
+                  imageQuality: 80,
+                );
+                if (picked != null) {
+                  setModalState(() {
+                    if (isBefore) {
+                      beforeImage = picked;
+                    } else {
+                      afterImage = picked;
+                    }
+                  });
+                }
+              } catch (e) {
+                if (bottomSheetContext.mounted) {
+                  ScaffoldMessenger.of(bottomSheetContext).showSnackBar(
+                    SnackBar(content: Text('Error selecting image: $e')),
+                  );
+                }
+              }
+            }
+
+            void showImageSourcePicker(bool isBefore) {
+              showModalBottomSheet(
+                context: context,
+                builder: (ctx) => SafeArea(
+                  child: Wrap(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.camera_alt),
+                        title: const Text('Take Photo with Camera'),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          pickImage(isBefore, ImageSource.camera);
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.photo_library),
+                        title: const Text('Choose from Gallery'),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          pickImage(isBefore, ImageSource.gallery);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            Future<void> submitCompletion() async {
+              final bookingId = widget.booking['id']?.toString() ?? '';
+              if (bookingId.isEmpty) return;
+
+              if (afterImage == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please upload an After-Work photo as proof of completion.'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+                return;
+              }
+
+              setModalState(() {
+                isUploading = true;
+                statusNote = 'Uploading proof photos...';
+              });
+
+              try {
+                String? beforePhotoUrl;
+                String? afterPhotoUrl;
+
+                if (beforeImage != null) {
+                  final bytes = await beforeImage!.readAsBytes();
+                  final b64 = base64Encode(bytes);
+                  beforePhotoUrl = await ApiService.uploadPhoto(
+                    base64Data: b64,
+                    filename: beforeImage!.name,
+                  );
+                }
+
+                setModalState(() {
+                  statusNote = 'Uploading completion proof...';
+                });
+
+                if (afterImage != null) {
+                  final bytes = await afterImage!.readAsBytes();
+                  final b64 = base64Encode(bytes);
+                  afterPhotoUrl = await ApiService.uploadPhoto(
+                    base64Data: b64,
+                    filename: afterImage!.name,
+                  );
+                }
+
+                setModalState(() {
+                  statusNote = 'Finalizing booking & settling payment...';
+                });
+
+                await ApiService.completeBooking(
+                  bookingId: bookingId,
+                  afterPhotoUrl: afterPhotoUrl,
+                  beforePhotoUrl: beforePhotoUrl,
+                );
+
+                if (bottomSheetContext.mounted) {
+                  Navigator.pop(bottomSheetContext);
+                }
+
+                if (!mounted) return;
+                setState(() {
+                  _status = 'completed';
+                });
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Job marked as Completed! Payment and commission settled.'),
+                    backgroundColor: LiveTrackingScreen.accentColor,
+                    duration: Duration(seconds: 4),
+                  ),
+                );
+
+                _fetchTrackingData();
+              } catch (e) {
+                setModalState(() {
+                  isUploading = false;
+                });
+                if (bottomSheetContext.mounted) {
+                  ScaffoldMessenger.of(bottomSheetContext).showSnackBar(
+                    SnackBar(
+                      content: Text('Completion failed: ${e.toString().replaceAll("Exception: ", "")}'),
+                      backgroundColor: Colors.red[700],
+                    ),
+                  );
+                }
+              }
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Complete Work & Proof',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: LiveTrackingScreen.primaryColor),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: isUploading ? null : () => Navigator.pop(bottomSheetContext),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Take photos of the finished job for customer verification and quality guarantee.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Before photo (optional)
+                    const Text('Before Work Photo (Optional)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: isUploading ? null : () => showImageSourcePicker(true),
+                      child: Container(
+                        height: 90,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFCBD5E1), style: BorderStyle.solid),
+                        ),
+                        child: beforeImage != null
+                            ? Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
+                                    child: Image.file(
+                                      File(beforeImage!.path),
+                                      width: 90,
+                                      height: 90,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(beforeImage!.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                        const SizedBox(height: 4),
+                                        const Text('Tap to change photo', style: TextStyle(color: LiveTrackingScreen.primaryColor, fontSize: 11)),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.close, color: Colors.grey),
+                                    onPressed: isUploading ? null : () => setModalState(() => beforeImage = null),
+                                  ),
+                                ],
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(Icons.add_a_photo_outlined, color: Color(0xFF64748B), size: 24),
+                                  SizedBox(width: 8),
+                                  Text('Add Initial State / Before Photo', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                                ],
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // After photo (required)
+                    Row(
+                      children: const [
+                        Text('After Work Photo (Proof of Completion)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                        Text(' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: isUploading ? null : () => showImageSourcePicker(false),
+                      child: Container(
+                        height: 90,
+                        decoration: BoxDecoration(
+                          color: afterImage != null ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: afterImage != null ? LiveTrackingScreen.accentColor : const Color(0xFFCBD5E1),
+                            width: afterImage != null ? 1.5 : 1,
+                          ),
+                        ),
+                        child: afterImage != null
+                            ? Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
+                                    child: Image.file(
+                                      File(afterImage!.path),
+                                      width: 90,
+                                      height: 90,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(afterImage!.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                        const SizedBox(height: 4),
+                                        const Text('Tap to change photo', style: TextStyle(color: LiveTrackingScreen.accentColor, fontSize: 11)),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.close, color: Colors.grey),
+                                    onPressed: isUploading ? null : () => setModalState(() => afterImage = null),
+                                  ),
+                                ],
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(Icons.add_photo_alternate_outlined, color: LiveTrackingScreen.accentColor, size: 24),
+                                  SizedBox(width: 8),
+                                  Text('Upload Finished Work Photo', style: TextStyle(color: LiveTrackingScreen.accentColor, fontWeight: FontWeight.w600, fontSize: 13)),
+                                ],
+                              ),
+                      ),
+                    ),
+
+                    if (isUploading) ...[
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                          const SizedBox(width: 10),
+                          Text(statusNote, style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
+                        ],
+                      ),
+                    ],
+
+                    const SizedBox(height: 20),
+
+                    ElevatedButton(
+                      key: const Key('submit_complete_booking_btn'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: LiveTrackingScreen.accentColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onPressed: isUploading ? null : submitCompletion,
+                      child: const Text('Confirm & Complete Booking', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -552,7 +893,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                             onPressed: _isUpdatingStatus ? null : () => _handleUpdateStatus('in_progress'),
                           ),
 
-                        if (_status == 'in_progress')
+                        if (_status == 'in_progress') ...[
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
@@ -562,13 +903,53 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                             ),
                             child: Row(
                               children: const [
-                                Icon(Icons.check_circle, color: LiveTrackingScreen.accentColor, size: 20),
+                                Icon(Icons.handyman, color: LiveTrackingScreen.accentColor, size: 20),
                                 SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    'Work in progress! Complete job & upload proof photos in Module 6.',
+                                    'Work is in progress. Once complete, submit proof photos to finish the job.',
                                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF166534)),
                                   ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          ElevatedButton.icon(
+                            key: const Key('provider_complete_work_btn'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: LiveTrackingScreen.accentColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            icon: const Icon(Icons.task_alt),
+                            label: const Text('Complete Work & Upload Proof', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                            onPressed: _showCompleteWorkModal,
+                          ),
+                        ],
+
+                        if (_status == 'completed')
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0FDF4),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFF86EFAC)),
+                            ),
+                            child: Column(
+                              children: const [
+                                Icon(Icons.verified, color: LiveTrackingScreen.accentColor, size: 36),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Job Completed Successfully!',
+                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF166534)),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Payment has been settled. Your wallet ledger has been updated.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 12, color: Color(0xFF15803D)),
                                 ),
                               ],
                             ),
@@ -578,15 +959,19 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: _status == 'in_progress' ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
+                            color: (_status == 'in_progress' || _status == 'completed') ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: const Color(0xFFE2E8F0)),
                           ),
                           child: Row(
                             children: [
                               Icon(
-                                _status == 'in_progress' ? Icons.handyman : Icons.navigation,
-                                color: _status == 'in_progress' ? LiveTrackingScreen.accentColor : LiveTrackingScreen.primaryColor,
+                                _status == 'completed'
+                                    ? Icons.verified
+                                    : _status == 'in_progress'
+                                        ? Icons.handyman
+                                        : Icons.navigation,
+                                color: (_status == 'in_progress' || _status == 'completed') ? LiveTrackingScreen.accentColor : LiveTrackingScreen.primaryColor,
                                 size: 20,
                               ),
                               const SizedBox(width: 10),
@@ -598,7 +983,9 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                                           ? 'Partner is en route to your location. ETA: ${_etaMinutes ?? 15} mins.'
                                           : _status == 'in_progress'
                                               ? 'Partner has arrived and work is actively in progress!'
-                                              : 'Job status: ${_status.toUpperCase()}',
+                                              : _status == 'completed'
+                                                  ? 'Service completed! Thank you for choosing QuoteKaro.'
+                                                  : 'Job status: ${_status.toUpperCase()}',
                                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF334155)),
                                 ),
                               ),

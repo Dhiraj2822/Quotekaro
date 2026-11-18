@@ -69,6 +69,7 @@ const addressesRoutes = require('./addresses/addresses.routes');
 const couponsRoutes = require('./coupons/coupons.routes');
 const supportRoutes = require('./support/support.routes');
 const { notificationsRoutes } = require('./notifications');
+const legalRoutes = require('./legal/legal.routes');
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', usersRoutes);
@@ -83,6 +84,7 @@ app.use('/api/v1/addresses', addressesRoutes);
 app.use('/api/v1/coupons', couponsRoutes);
 app.use('/api/v1/support', supportRoutes);
 app.use('/api/v1/notifications', notificationsRoutes);
+app.use('/api/v1/legal', legalRoutes);
 
 // Photo / media upload endpoint
 app.post('/api/v1/upload', (req, res) => {

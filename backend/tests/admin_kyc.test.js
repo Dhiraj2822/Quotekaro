@@ -52,6 +52,7 @@ describe('Module 2 - Task 4: Admin KYC Approval Queue Endpoints', () => {
         user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE RESTRICT,
         kyc_status kyc_status_enum NOT NULL DEFAULT 'pending',
         kyc_document_url TEXT,
+        rejection_reason TEXT,
         categories TEXT[],
         service_area_radius_km INTEGER,
         base_location_lat DECIMAL,

@@ -101,7 +101,11 @@ app.post('/api/v1/upload', (req, res) => {
     const publicUrl = `${protocol}://${host}/uploads/${safeName}`;
     res.status(200).json({ success: true, url: publicUrl });
   } catch (err) {
-    res.status(500).json({ error: { code: 'UPLOAD_FAILED', message: err.message } });
+    console.error('[UPLOAD ERROR]', err);
+    const msg = process.env.NODE_ENV === 'production'
+      ? 'Failed to process and save the uploaded image. Please try again.'
+      : err.message;
+    res.status(500).json({ error: { code: 'UPLOAD_FAILED', message: msg } });
   }
 });
 
@@ -118,10 +122,20 @@ app.use((req, res) => {
 // Standard global error handler
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || err.status || 500;
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (statusCode >= 500) {
+    console.error(`[SERVER ERROR 500] ${req.method} ${req.url}:`, err);
+  }
+
+  const userFacingMessage = (statusCode >= 500 && isProduction)
+    ? 'Something went wrong on our end. Please try again later.'
+    : (err.message || 'An unexpected error occurred');
+
   res.status(statusCode).json({
     error: {
-      code: err.code || 'INTERNAL_SERVER_ERROR',
-      message: err.message || 'An unexpected error occurred'
+      code: err.code || (statusCode >= 500 ? 'INTERNAL_SERVER_ERROR' : 'ERROR'),
+      message: userFacingMessage
     }
   });
 });

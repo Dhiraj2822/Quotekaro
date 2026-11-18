@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import 'provider_kyc_screen.dart';
@@ -52,11 +52,15 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<String> _puneAreas = [
     'Kothrud, Pune',
     'Baner, Pune',
+    'Aundh, Pune',
     'Shivajinagar, Pune',
     'Viman Nagar, Pune',
-    'Hadapsar, Pune',
-    'Aundh, Pune',
     'Wakad, Pune',
+    'Hinjewadi, Pune',
+    'Hadapsar, Pune',
+    'Magarpatta, Pune',
+    'Kharadi, Pune',
+    'Pimpri-Chinchwad, Pune',
   ];
 
   @override
@@ -451,6 +455,20 @@ class _HomeScreenState extends State<HomeScreen> {
                     onChanged: (newArea) {
                       if (newArea != null) {
                         setState(() => _selectedArea = newArea);
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
+                                const SizedBox(width: 8),
+                                Text('Service area set to $newArea'),
+                              ],
+                            ),
+                            duration: const Duration(seconds: 1),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
                       }
                     },
                   ),

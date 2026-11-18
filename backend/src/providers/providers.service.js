@@ -39,7 +39,7 @@ async function submitKyc(userId, documentUrl) {
   if (existing) {
     const res = await db.query(
       `UPDATE provider_profiles
-       SET kyc_document_url = $1, kyc_status = 'pending', is_available = false, updated_at = NOW()
+       SET kyc_document_url = $1, kyc_status = 'pending', rejection_reason = NULL, is_available = false, updated_at = NOW()
        WHERE user_id = $2
        RETURNING *`,
       [documentUrl, userId]

@@ -438,7 +438,11 @@ function App() {
   // Handle KYC Rejection Confirmation
   const confirmRejection = async () => {
     if (!rejectModalProvider) return;
-    const reason = rejectionReason.trim() || 'Document does not meet platform verification standards.';
+    const reason = rejectionReason.trim();
+    if (!reason) {
+      showToast('Rejection reason is mandatory.', 'error');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -1167,45 +1171,80 @@ function App() {
 
                         {/* Action Buttons */}
                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                          {p.kyc_status !== 'approved' && (
-                            <button
-                              onClick={() => handleApprove(p)}
-                              disabled={loading}
-                              style={{
-                                backgroundColor: 'var(--accent)',
-                                color: '#FFFFFF',
-                                padding: '8px 16px',
-                                borderRadius: 'var(--radius-btn)',
-                                fontSize: '13px',
-                                fontWeight: 600,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px'
-                              }}
-                            >
-                              ✓ Approve KYC
-                            </button>
-                          )}
+                          {p.kyc_status === 'pending' ? (
+                            <>
+                              <button
+                                onClick={() => handleApprove(p)}
+                                disabled={loading}
+                                style={{
+                                  backgroundColor: 'var(--accent)',
+                                  color: '#FFFFFF',
+                                  padding: '8px 16px',
+                                  borderRadius: 'var(--radius-btn)',
+                                  fontSize: '13px',
+                                  fontWeight: 600,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px'
+                                }}
+                              >
+                                ✓ Approve KYC
+                              </button>
 
-                          {p.kyc_status !== 'rejected' && (
-                            <button
-                              onClick={() => {
-                                setRejectModalProvider(p);
-                                setRejectionReason('');
-                              }}
-                              disabled={loading}
-                              style={{
-                                backgroundColor: '#FFFFFF',
+                              <button
+                                onClick={() => {
+                                  setRejectModalProvider(p);
+                                  setRejectionReason('');
+                                }}
+                                disabled={loading}
+                                style={{
+                                  backgroundColor: '#FFFFFF',
+                                  color: 'var(--danger)',
+                                  border: '1px solid var(--danger)',
+                                  padding: '8px 14px',
+                                  borderRadius: 'var(--radius-btn)',
+                                  fontSize: '13px',
+                                  fontWeight: 600
+                                }}
+                              >
+                                ✕ Reject
+                              </button>
+                            </>
+                          ) : p.kyc_status === 'rejected' ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                              <span style={{
+                                backgroundColor: '#FEE2E2',
                                 color: 'var(--danger)',
-                                border: '1px solid var(--danger)',
-                                padding: '8px 14px',
-                                borderRadius: 'var(--radius-btn)',
-                                fontSize: '13px',
-                                fontWeight: 600
-                              }}
-                            >
-                              ✕ Reject
-                            </button>
+                                padding: '5px 12px',
+                                borderRadius: '12px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                ✕ KYC Rejected
+                              </span>
+                              {p.rejection_reason && (
+                                <span style={{ fontSize: '11px', color: '#991B1B', maxWidth: '240px', textAlign: 'right', fontWeight: 500 }}>
+                                  Reason: {p.rejection_reason}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span style={{
+                              backgroundColor: '#DCFCE7',
+                              color: 'var(--accent)',
+                              padding: '5px 12px',
+                              borderRadius: '12px',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              ✓ Verified & Approved
+                            </span>
                           )}
                         </div>
                       </div>
@@ -1297,10 +1336,11 @@ function App() {
                 </p>
 
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: 'var(--text-main)' }}>
-                  Rejection Reason (visible to provider):
+                  Rejection Reason (visible to provider) <span style={{ color: 'var(--danger)' }}>* (Mandatory)</span>:
                 </label>
                 <textarea
                   rows={3}
+                  required
                   placeholder="e.g. Identity proof scan is blurry; Name does not match certificate..."
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
@@ -1308,13 +1348,18 @@ function App() {
                     width: '100%',
                     padding: '10px',
                     borderRadius: 'var(--radius-btn)',
-                    border: '1px solid var(--border-color)',
+                    border: `1px solid ${!rejectionReason.trim() ? '#FCA5A5' : 'var(--border-color)'}`,
                     fontSize: '13px',
-                    marginBottom: '12px',
+                    marginBottom: '6px',
                     outline: 'none',
                     resize: 'vertical'
                   }}
                 />
+                {!rejectionReason.trim() && (
+                  <div style={{ fontSize: '11px', color: 'var(--danger)', marginBottom: '10px', fontWeight: 500 }}>
+                    ⚠️ A specific rejection reason is mandatory so the provider knows what needs to be fixed.
+                  </div>
+                )}
 
                 {/* Preset reasons */}
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '20px' }}>
@@ -1364,14 +1409,16 @@ function App() {
                   <button
                     type="button"
                     onClick={confirmRejection}
-                    disabled={loading}
+                    disabled={loading || !rejectionReason.trim()}
                     style={{
-                      backgroundColor: 'var(--danger)',
+                      backgroundColor: !rejectionReason.trim() ? '#94A3B8' : 'var(--danger)',
                       color: '#FFFFFF',
                       padding: '8px 16px',
                       borderRadius: 'var(--radius-btn)',
                       fontSize: '13px',
-                      fontWeight: 600
+                      fontWeight: 600,
+                      cursor: !rejectionReason.trim() ? 'not-allowed' : 'pointer',
+                      opacity: !rejectionReason.trim() ? 0.7 : 1
                     }}
                   >
                     Confirm Rejection

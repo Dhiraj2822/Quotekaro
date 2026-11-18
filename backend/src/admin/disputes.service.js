@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const { sanitizeText } = require('../utils/sanitize');
+const { notificationsService } = require('../notifications');
 
 /**
  * Raise a dispute against a booking.
@@ -203,7 +204,42 @@ async function updateDisputeStatus({ disputeId, status, resolutionNotes }) {
     [status, notesToSet, disputeId]
   );
 
-  return updateRes.rows[0];
+  const updatedDispute = updateRes.rows[0];
+
+  // 3. Notify booking customer and provider on resolution/status change
+  try {
+    const fullDispute = await getDisputeById(disputeId);
+    if (fullDispute) {
+      const statusTitle = status === 'resolved'
+        ? 'Dispute Resolved ✅'
+        : status === 'rejected'
+          ? 'Dispute Closed ⚠️'
+          : `Dispute Update: ${status}`;
+      const noteSuffix = notesToSet ? ` Note: ${notesToSet}` : '';
+
+      if (fullDispute.customer_id) {
+        await notificationsService.createNotification(fullDispute.customer_id, {
+          title: statusTitle,
+          body: `The dispute for booking #${disputeId.slice(0, 8)} has been updated to "${status}".${noteSuffix}`,
+          type: 'system',
+          metadata: { dispute_id: disputeId, booking_id: fullDispute.booking_id, status }
+        });
+      }
+
+      if (fullDispute.provider_user_id) {
+        await notificationsService.createNotification(fullDispute.provider_user_id, {
+          title: statusTitle,
+          body: `The dispute for booking #${disputeId.slice(0, 8)} has been updated to "${status}".${noteSuffix}`,
+          type: 'system',
+          metadata: { dispute_id: disputeId, booking_id: fullDispute.booking_id, status }
+        });
+      }
+    }
+  } catch (notifErr) {
+    // Non-blocking notification dispatch
+  }
+
+  return updatedDispute;
 }
 
 /**

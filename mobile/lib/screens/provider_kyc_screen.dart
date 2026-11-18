@@ -41,20 +41,43 @@ class _ProviderKycScreenState extends State<ProviderKycScreen> {
     super.initState();
     _profile = widget.initialProfile;
     if (_profile != null) {
-      _isAvailable = _profile!['is_available'] == true;
-      if (_profile!['service_area_radius_km'] != null) {
-        _radiusKm = (_profile!['service_area_radius_km'] as num).toDouble();
+      _applyProfileData(_profile!);
+    }
+    _fetchProfileFromServer();
+  }
+
+  void _applyProfileData(Map<String, dynamic> p) {
+    _isAvailable = p['is_available'] == true;
+    if (p['service_area_radius_km'] != null) {
+      _radiusKm = (p['service_area_radius_km'] as num).toDouble();
+    }
+    if (p['categories'] != null && p['categories'] is List) {
+      _selectedCategories.clear();
+      for (var c in p['categories']) {
+        _selectedCategories.add(c.toString());
       }
-      if (_profile!['categories'] != null && _profile!['categories'] is List) {
-        _selectedCategories.clear();
-        for (var c in _profile!['categories']) {
-          _selectedCategories.add(c.toString());
+    }
+    if (p['kyc_document_url'] != null && p['kyc_document_url'].toString().isNotEmpty) {
+      _docUrl = p['kyc_document_url'].toString();
+      _selectedDocName = 'Aadhaar / ID Proof (Attached)';
+    }
+  }
+
+  Future<void> _fetchProfileFromServer() async {
+    try {
+      final user = ApiService.currentUser;
+      final profileId = user?['provider_profile']?['id']?.toString() ?? user?['id']?.toString();
+      if (profileId != null && profileId.isNotEmpty) {
+        final profile = await ApiService.getProviderProfile(profileId);
+        if (mounted && profile.isNotEmpty) {
+          setState(() {
+            _profile = profile;
+            _applyProfileData(profile);
+          });
         }
       }
-      if (_profile!['kyc_document_url'] != null) {
-        _docUrl = _profile!['kyc_document_url'];
-        _selectedDocName = 'Aadhaar / ID Proof (Attached)';
-      }
+    } catch (_) {
+      // Use existing profile data if offline
     }
   }
 
@@ -278,12 +301,60 @@ class _ProviderKycScreenState extends State<ProviderKycScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    kycStatus == 'approved'
-                        ? 'Your profile is approved. You can toggle your availability and submit quotes for nearby customer jobs.'
-                        : 'Your ID proof is required for customer safety. You cannot be marked available until approved by an administrator.',
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4),
-                  ),
+                  if (kycStatus == 'rejected') ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 18),
+                              SizedBox(width: 8),
+                              Text(
+                                'Rejection Reason from Admin:',
+                                style: TextStyle(
+                                  color: Color(0xFF991B1B),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _profile?['rejection_reason'] != null &&
+                                    _profile!['rejection_reason'].toString().isNotEmpty
+                                ? _profile!['rejection_reason'].toString()
+                                : 'Uploaded document does not meet verification requirements. Please upload a clear official ID proof below.',
+                            style: const TextStyle(
+                              color: Color(0xFFB91C1C),
+                              fontSize: 13,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Please re-upload a clear identity proof below. Once submitted, your profile will be placed back into review.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4),
+                    ),
+                  ] else ...[
+                    Text(
+                      kycStatus == 'approved'
+                          ? 'Your profile is approved. You can toggle your availability and submit quotes for nearby customer jobs.'
+                          : 'Your ID proof is required for customer safety. You cannot be marked available until approved by an administrator.',
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4),
+                    ),
+                  ],
                 ],
               ),
             ),

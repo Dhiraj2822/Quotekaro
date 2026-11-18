@@ -78,8 +78,41 @@ async function markAllNotificationsRead(userId) {
   return { success: true };
 }
 
+async function createNotification(userId, { title, body, type = 'system', metadata = {} }) {
+  const notifObj = {
+    id: `notif-${Date.now()}`,
+    user_id: userId,
+    title,
+    body,
+    type,
+    metadata,
+    is_read: false,
+    created_at: new Date().toISOString()
+  };
+
+  try {
+    const res = await db.query(
+      `INSERT INTO user_notifications (user_id, title, body, type, metadata, is_read)
+       VALUES ($1, $2, $3, $4, $5, false)
+       RETURNING *`,
+      [userId, title, body, type, JSON.stringify(metadata)]
+    );
+    if (res && res.rows && res.rows[0]) {
+      return res.rows[0];
+    }
+  } catch (err) {
+    // Memory fallback
+  }
+
+  const list = memoryNotifications.get(userId) || [];
+  list.unshift(notifObj);
+  memoryNotifications.set(userId, list);
+  return notifObj;
+}
+
 module.exports = {
   getUserNotifications,
+  createNotification,
   markNotificationAsRead,
   markAllNotificationsRead
 };

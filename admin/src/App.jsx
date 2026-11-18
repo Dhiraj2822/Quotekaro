@@ -354,13 +354,13 @@ function App() {
     fetch(`${API_ROOT_URL}/health`)
       .then((res) => res.json())
       .then((data) => {
-        setBackendHealth({ status: 'online', message: `${data.service} is online (${data.status})` });
+        setBackendHealth({ status: 'online', message: 'All systems operational' });
         fetchLiveProviders();
         fetchLiveDisputes();
         fetchLiveAnalytics();
       })
       .catch(() => {
-        setBackendHealth({ status: 'offline', message: 'Backend offline — Using local state & demo data' });
+        setBackendHealth({ status: 'offline', message: 'Service unavailable' });
       });
   }, []);
 
@@ -701,78 +701,79 @@ function App() {
           <header style={{
             backgroundColor: 'var(--primary)',
             color: '#FFFFFF',
-            padding: '16px 32px',
+            padding: '0 32px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            height: '60px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+            position: 'sticky',
+            top: 0,
+            zIndex: 100
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {/* Left: Logo + Title */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{
-                width: '36px',
-                height: '36px',
+                width: '34px',
+                height: '34px',
                 borderRadius: '8px',
                 backgroundColor: 'var(--accent)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: 'bold',
-                fontSize: '20px',
-                color: '#FFFFFF'
+                fontSize: '18px',
+                color: '#FFFFFF',
+                flexShrink: 0
               }}>Q</div>
               <div>
-                <h1 style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.3px', margin: 0 }}>QuoteKaro Operations Hub</h1>
-                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>Platform Administrator Portal</span>
+                <div style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '-0.2px', lineHeight: 1.2 }}>QuoteKaro Admin</div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.65)', lineHeight: 1.2 }}>Operations Dashboard</div>
               </div>
             </div>
 
-            {/* System Health / Badge */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Right: Status + Sign Out */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {/* Backend status pill */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                gap: '6px',
                 fontSize: '12px',
-                backgroundColor: 'rgba(255,255,255,0.12)',
-                padding: '6px 14px',
-                borderRadius: 'var(--radius-btn)'
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                padding: '5px 12px',
+                borderRadius: '20px',
+                border: '1px solid rgba(255,255,255,0.15)'
               }}>
                 <span style={{
-                  width: '8px',
-                  height: '8px',
+                  width: '7px',
+                  height: '7px',
                   borderRadius: '50%',
-                  backgroundColor: backendHealth.status === 'online' ? '#4ADE80' : 'var(--warning)'
+                  backgroundColor: backendHealth.status === 'online' ? '#4ADE80' : backendHealth.status === 'checking' ? '#FCD34D' : '#F87171',
+                  flexShrink: 0
                 }}></span>
-                <span>{backendHealth.message}</span>
+                <span style={{ color: 'rgba(255,255,255,0.85)' }}>
+                  {backendHealth.status === 'online' ? 'Live' : backendHealth.status === 'checking' ? 'Connecting…' : 'Offline'}
+                </span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{
+              {/* Sign out */}
+              <button
+                onClick={handleAdminLogout}
+                style={{
                   fontSize: '12px',
-                  backgroundColor: 'var(--accent)',
+                  backgroundColor: 'rgba(255,255,255,0.12)',
                   color: '#FFFFFF',
-                  padding: '6px 12px',
-                  borderRadius: 'var(--radius-btn)',
-                  fontWeight: 600
-                }}>
-                  ✓ Admin Authenticated
-                </div>
-                <button
-                  onClick={handleAdminLogout}
-                  style={{
-                    fontSize: '12px',
-                    backgroundColor: 'rgba(255,255,255,0.15)',
-                    color: '#FFFFFF',
-                    padding: '6px 14px',
-                    borderRadius: 'var(--radius-btn)',
-                    fontWeight: 500,
-                    border: '1px solid rgba(255,255,255,0.3)',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Sign Out
-                </button>
-              </div>
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  fontWeight: 500,
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                Sign Out
+              </button>
             </div>
           </header>
 
@@ -782,7 +783,7 @@ function App() {
             borderBottom: '1px solid var(--border-color)',
             padding: '0 32px'
           }}>
-            <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', gap: '4px', overflowX: 'auto' }}>
+            <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', gap: '0', overflowX: 'auto' }}>
               {[
                 { id: 'kyc', label: '1. Provider KYC', badge: pendingCount },
                 { id: 'customers', label: '2. Customers', badge: null },
@@ -803,14 +804,20 @@ function App() {
                   }}
                   style={{
                     padding: '14px 18px',
-                    fontSize: '14px',
-                    fontWeight: activeTab === tab.id ? 600 : 500,
+                    fontSize: '13px',
+                    fontWeight: activeTab === tab.id ? 600 : 400,
                     color: activeTab === tab.id ? 'var(--primary)' : 'var(--text-muted)',
                     borderBottom: activeTab === tab.id ? '3px solid var(--primary)' : '3px solid transparent',
+                    borderTop: 'none',
+                    borderLeft: 'none',
+                    borderRight: 'none',
                     backgroundColor: 'transparent',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px'
+                    gap: '6px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0
                   }}
                 >
                   <span>{tab.label}</span>
@@ -843,7 +850,7 @@ function App() {
           </div>
 
           {/* Main Content Area */}
-          <main style={{ padding: '24px 32px', maxWidth: '1200px', margin: '0 auto', width: '100%', flex: 1 }}>
+          <main style={{ padding: '24px 32px', maxWidth: '1280px', margin: '0 auto', width: '100%', flex: 1, boxSizing: 'border-box' }}>
             {/* Toast / Notification Banner */}
             {actionMessage && (
               <div style={{
@@ -1554,17 +1561,6 @@ function App() {
             </div>
           )}
 
-          {/* Footer */}
-          <footer style={{
-            textAlign: 'center',
-            padding: '16px',
-            color: 'var(--text-muted)',
-            fontSize: '12px',
-            borderTop: '1px solid var(--border-color)',
-            backgroundColor: 'var(--bg-surface)'
-          }}>
-            QuoteKaro Platform Operations • MIT ADT University • PBL 2026
-          </footer>
         </>
       )}
     </div>

@@ -1468,8 +1468,10 @@ function App() {
                   marginBottom: '16px'
                 }}>
                   {(() => {
-                    const safeUrl = previewDocUrl ? previewDocUrl.replace(/^http:\/\/quotekaro-backend\.onrender\.com/, 'https://quotekaro-backend.onrender.com') : '';
-                    const isImg = safeUrl && (safeUrl.match(/\.(jpg|jpeg|png|webp|gif)$/i) || safeUrl.startsWith('data:image'));
+                    const rawUrl = previewDocUrl || '';
+                    const safeUrl = rawUrl.replace(/^http:\/\//i, 'https://');
+                    const isPdf = safeUrl.toLowerCase().includes('.pdf');
+                    const isImg = !isPdf && (safeUrl.match(/\.(jpg|jpeg|png|webp|gif)$/i) || safeUrl.startsWith('data:image'));
                     return isImg ? (
                       <div>
                         <img
@@ -1506,13 +1508,26 @@ function App() {
                       </div>
                     ) : (
                       <div>
-                        <div style={{ fontSize: '48px', marginBottom: '8px' }}>📄</div>
-                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
-                          KYC Government Document Verified
+                        {isPdf ? (
+                          <iframe
+                            src={safeUrl}
+                            title="KYC PDF Document"
+                            style={{
+                              width: '100%',
+                              height: '350px',
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '8px'
+                            }}
+                          />
+                        ) : (
+                          <div style={{ fontSize: '48px', marginBottom: '8px' }}>📄</div>
+                        )}
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)', marginTop: '8px', marginBottom: '4px' }}>
+                          KYC Document Attached
                         </div>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)', wordBreak: 'break-all', marginBottom: '8px' }}>
                           <a href={safeUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-light)', textDecoration: 'underline' }}>
-                            {safeUrl} ↗
+                            Open Document in New Tab ↗
                           </a>
                         </div>
                       </div>

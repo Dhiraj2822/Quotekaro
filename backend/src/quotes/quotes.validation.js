@@ -23,7 +23,8 @@ const getQuotesQuerySchema = z.object({
 const acceptQuoteSchema = z.object({
   quote_id: z
     .string({ message: 'quote_id is required' })
-    .uuid('quote_id must be a valid UUID')
+    .uuid('quote_id must be a valid UUID'),
+  payment_method: z.enum(['upi', 'card', 'cash']).optional().default('cash')
 }).strict();
 
 module.exports = {

@@ -72,6 +72,65 @@ async function deductCommission({ providerId, bookingId, bookingPricePaise, clie
 }
 
 /**
+ * Credit provider's wallet with net job payout for digital/online payments (UPI, Card, Razorpay).
+ * Net payout = bookingPricePaise - 10% platform commission.
+ */
+async function creditPayout({ providerId, bookingId, bookingPricePaise, client = null }) {
+  const queryRunner = client || db;
+
+  const commissionRate = COMMISSION_RATE_PERCENT;
+  const commissionPaise = Math.round((bookingPricePaise * commissionRate) / 100);
+  const payoutPaise = bookingPricePaise - commissionPaise;
+
+  // 1. Fetch current provider profile
+  const providerRes = await queryRunner.query(
+    'SELECT id, user_id, wallet_balance_paise, is_available FROM provider_profiles WHERE id = $1',
+    [providerId]
+  );
+
+  if (providerRes.rowCount === 0) {
+    const error = new Error('Provider profile not found');
+    error.statusCode = 404;
+    error.code = 'NOT_FOUND';
+    throw error;
+  }
+
+  const provider = providerRes.rows[0];
+  const currentBalance = provider.wallet_balance_paise !== null && provider.wallet_balance_paise !== undefined
+    ? parseInt(provider.wallet_balance_paise, 10)
+    : 0;
+
+  const newBalance = currentBalance + payoutPaise;
+  const isAvailable = newBalance >= PROVIDER_MIN_WALLET_BALANCE_PAISE ? true : provider.is_available;
+
+  // 2. Update provider profile balance
+  await queryRunner.query(
+    `UPDATE provider_profiles 
+     SET wallet_balance_paise = $1, is_available = $2, updated_at = NOW() 
+     WHERE id = $3`,
+    [newBalance, isAvailable, providerId]
+  );
+
+  // 3. Append-only ledger record for payout
+  const ledgerRes = await queryRunner.query(
+    `INSERT INTO wallet_ledger (provider_id, booking_id, entry_type, amount_paise, balance_after_paise)
+     VALUES ($1, $2, 'payout', $3, $4)
+     RETURNING id, provider_id, booking_id, entry_type, amount_paise, balance_after_paise, created_at`,
+    [providerId, bookingId, payoutPaise, newBalance]
+  );
+
+  return {
+    ledgerEntry: ledgerRes.rows[0],
+    payoutPaise,
+    commissionPaise,
+    previousBalance: currentBalance,
+    newBalance,
+    isAvailable,
+    belowThreshold: false
+  };
+}
+
+/**
  * Top-up provider's prepaid wallet
  */
 async function topupWallet({ providerProfileId, amountPaise, method = 'upi' }) {
@@ -172,6 +231,7 @@ async function getWalletByProviderId({ providerProfileId, user = null }) {
 
 module.exports = {
   deductCommission,
+  creditPayout,
   topupWallet,
   getWalletByProviderId,
   COMMISSION_RATE_PERCENT,

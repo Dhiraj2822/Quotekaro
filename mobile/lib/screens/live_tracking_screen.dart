@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import '../services/api_service.dart';
 import 'chat_screen.dart';
+import 'provider_otp_verify_screen.dart';
 
 class LiveTrackingScreen extends StatefulWidget {
   final Map<String, dynamic> booking;
@@ -886,11 +887,26 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
-                            icon: const Icon(Icons.build_circle),
-                            label: _isUpdatingStatus
-                                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : const Text('Arrived / Start Work (In Progress)', style: TextStyle(fontWeight: FontWeight.bold)),
-                            onPressed: _isUpdatingStatus ? null : () => _handleUpdateStatus('in_progress'),
+                            icon: const Icon(Icons.pin),
+                            label: const Text('Arrived / Enter Customer PIN to Start', style: TextStyle(fontWeight: FontWeight.bold)),
+                            onPressed: () async {
+                              final verified = await Navigator.push<bool>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ProviderOtpVerifyScreen(
+                                    bookingId: widget.booking['id']?.toString() ?? '',
+                                    customerName: customerName,
+                                    serviceName: category,
+                                  ),
+                                ),
+                              );
+                              if (verified == true && mounted) {
+                                setState(() {
+                                  _status = 'in_progress';
+                                });
+                                _fetchTrackingData();
+                              }
+                            },
                           ),
 
                         if (_status == 'in_progress') ...[
@@ -992,6 +1008,49 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                             ],
                           ),
                         ),
+
+                        if (widget.isCustomer && _status != 'completed' && widget.booking['start_otp'] != null) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
+                            child: Row(
+                              children: [
+                                const CircleAvatar(
+                                  backgroundColor: Color(0xFF2563EB),
+                                  radius: 16,
+                                  child: Icon(Icons.password, color: Colors.white, size: 18),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: const [
+                                      Text('Service Security PIN', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF1E40AF))),
+                                      Text('Share with partner when they arrive to begin work', style: TextStyle(fontSize: 10, color: Color(0xFF475569))),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFF93C5FD)),
+                                  ),
+                                  child: Text(
+                                    widget.booking['start_otp'].toString(),
+                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 2, color: Color(0xFF1E40AF)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ],
                   ),

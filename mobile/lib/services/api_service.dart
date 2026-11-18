@@ -361,6 +361,7 @@ class ApiService {
   static Future<Map<String, dynamic>> acceptQuote({
     required String jobId,
     required String quoteId,
+    String paymentMethod = 'cash',
   }) async {
     final url = Uri.parse('$baseUrl/jobs/$jobId/accept-quote');
     final response = await client.post(
@@ -369,7 +370,10 @@ class ApiService {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $currentToken',
       },
-      body: jsonEncode({'quote_id': quoteId}),
+      body: jsonEncode({
+        'quote_id': quoteId,
+        'payment_method': paymentMethod,
+      }),
     );
 
     final data = jsonDecode(response.body);

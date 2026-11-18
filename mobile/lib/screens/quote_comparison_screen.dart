@@ -65,45 +65,182 @@ class _QuoteComparisonScreenState extends State<QuoteComparisonScreen> {
     final jobId = widget.job['id']?.toString() ?? '';
     final providerName = quote['provider']?['name'] ?? 'Provider';
     final priceRupees = ((quote['price_paise'] ?? 0) / 100).toStringAsFixed(0);
+    final etaMinutes = quote['eta_minutes'] ?? 30;
 
-    final confirmed = await showDialog<bool>(
+    String selectedPaymentMethod = 'cash'; // 'cash' or 'upi'
+
+    final selectedMethod = await showModalBottomSheet<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirm Booking'),
-        content: Text(
-          'Do you want to accept $providerName\'s quote of ₹$priceRupees?\n\nThis will confirm your booking and notify the provider.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            key: const Key('dialog_confirm_accept_quote_btn'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: accentColor,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Accept & Book'),
-          ),
-        ],
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (modalCtx, setSheetState) {
+            return Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Confirm Booking & Payment',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(sheetCtx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Partner: $providerName • Estimated Arrival: $etaMinutes mins',
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Amount Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Total Agreed Amount', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                        Text('₹$priceRupees', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: accentColor)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  const Text('Select Payment Mode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: primaryColor)),
+                  const SizedBox(height: 10),
+
+                  // Option 1: Cash on Completion
+                  InkWell(
+                    onTap: () => setSheetState(() => selectedPaymentMethod = 'cash'),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: selectedPaymentMethod == 'cash' ? const Color(0xFFF0FDF4) : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: selectedPaymentMethod == 'cash' ? accentColor : const Color(0xFFE2E8F0),
+                          width: selectedPaymentMethod == 'cash' ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.money_rounded, color: selectedPaymentMethod == 'cash' ? accentColor : Colors.grey, size: 24),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                Text('Cash on Completion', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                SizedBox(height: 2),
+                                Text('Pay in cash directly to the technician after job is done', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                              ],
+                            ),
+                          ),
+                          Radio<String>(
+                            value: 'cash',
+                            groupValue: selectedPaymentMethod,
+                            activeColor: accentColor,
+                            onChanged: (val) => setSheetState(() => selectedPaymentMethod = val!),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Option 2: UPI / Online
+                  InkWell(
+                    onTap: () => setSheetState(() => selectedPaymentMethod = 'upi'),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: selectedPaymentMethod == 'upi' ? const Color(0xFFEFF6FF) : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: selectedPaymentMethod == 'upi' ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                          width: selectedPaymentMethod == 'upi' ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.account_balance_wallet_outlined, color: selectedPaymentMethod == 'upi' ? const Color(0xFF2563EB) : Colors.grey, size: 24),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                Text('UPI / Online Payment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                SizedBox(height: 2),
+                                Text('Pay online via GPay, PhonePe, Paytm, or Card', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                              ],
+                            ),
+                          ),
+                          Radio<String>(
+                            value: 'upi',
+                            groupValue: selectedPaymentMethod,
+                            activeColor: const Color(0xFF2563EB),
+                            onChanged: (val) => setSheetState(() => selectedPaymentMethod = val!),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  ElevatedButton(
+                    key: const Key('dialog_confirm_accept_quote_btn'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () => Navigator.pop(sheetCtx, selectedPaymentMethod),
+                    child: Text('Confirm Booking with ${selectedPaymentMethod == 'cash' ? 'Cash' : 'UPI'}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
 
-    if (confirmed != true) return;
+    if (selectedMethod == null) return;
 
     setState(() {
       _acceptingQuoteId = quoteId;
     });
 
     try {
-      final booking = await ApiService.acceptQuote(jobId: jobId, quoteId: quoteId);
+      final booking = await ApiService.acceptQuote(
+        jobId: jobId,
+        quoteId: quoteId,
+        paymentMethod: selectedMethod,
+      );
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Quote accepted! Booking confirmed.'),
+        SnackBar(
+          content: Text('Quote accepted! Booking confirmed via ${selectedMethod.toUpperCase()}.'),
           backgroundColor: accentColor,
         ),
       );

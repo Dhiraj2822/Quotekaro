@@ -235,6 +235,11 @@ async function verifyStartOtp(user, bookingId, enteredOtp) {
     WHERE id = $1
   `, [bookingId]);
 
+  const bRes = await db.query('SELECT job_id FROM bookings WHERE id = $1', [bookingId]);
+  if (bRes.rows.length > 0 && bRes.rows[0].job_id) {
+    await db.query(`UPDATE jobs SET status = 'in_progress', updated_at = NOW() WHERE id = $1`, [bRes.rows[0].job_id]);
+  }
+
   return getBookingById({ bookingId, user });
 }
 

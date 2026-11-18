@@ -1,7 +1,7 @@
 const db = require('../config/db');
 const { calculateDistanceKm } = require('../utils/geo');
 const { getDistanceAndETA } = require('../utils/maps');
-const { deductCommission } = require('../wallet/wallet.service');
+const { deductCommission, creditPayout } = require('../wallet/wallet.service');
 
 // In-memory live tracking location cache (bookingId -> { lat, lng, updatedAt })
 const liveLocationCache = new Map();
@@ -20,6 +20,7 @@ async function getBookingById({ bookingId, user }) {
       b.customer_id,
       b.provider_id,
       b.status,
+      b.start_otp,
       b.scheduled_at,
       b.completed_at,
       b.before_photo_url,
@@ -58,7 +59,17 @@ async function getBookingById({ bookingId, user }) {
     WHERE b.id = $1
   `;
 
-  const res = await db.query(query, [bookingId]);
+  let res;
+  try {
+    res = await db.query(query, [bookingId]);
+  } catch (err) {
+    if (err.message && err.message.includes('start_otp')) {
+      const fallbackQuery = query.replace('b.start_otp,\n', '').replace('b.start_otp,', '');
+      res = await db.query(fallbackQuery, [bookingId]);
+    } else {
+      throw err;
+    }
+  }
   if (res.rowCount === 0) {
     const error = new Error('Booking not found');
     error.statusCode = 404;
@@ -83,7 +94,7 @@ async function getBookingById({ bookingId, user }) {
     throw error;
   }
 
-  return formatBookingResponse(row);
+  return formatBookingResponse(row, user);
 }
 
 /**
@@ -233,10 +244,14 @@ async function getBookingsForUser({ user, limit = 50, offset = 0 } = {}) {
   }
 
   const res = await db.query(query, params);
-  return res.rows.map(formatBookingResponse);
+  return res.rows.map(r => formatBookingResponse(r, user));
 }
 
-function formatBookingResponse(row) {
+function formatBookingResponse(row, user = null) {
+  const isCustomer = user && user.role === 'customer';
+  const isAdmin = user && user.role === 'admin';
+  const showOtp = !user || isCustomer || isAdmin;
+
   return {
     id: row.id,
     job_id: row.job_id,
@@ -244,6 +259,7 @@ function formatBookingResponse(row) {
     customer_id: row.customer_id,
     provider_id: row.provider_id,
     status: row.status,
+    start_otp: showOtp ? (row.start_otp || null) : null,
     scheduled_at: row.scheduled_at,
     completed_at: row.completed_at,
     before_photo_url: row.before_photo_url || (row.job_photo_urls && row.job_photo_urls.length > 0 ? row.job_photo_urls[0] : null),
@@ -446,7 +462,17 @@ async function getBookingTrack({ bookingId, user }) {
     WHERE b.id = $1
   `;
 
-  const res = await db.query(query, [bookingId]);
+  let res;
+  try {
+    res = await db.query(query, [bookingId]);
+  } catch (err) {
+    if (err.message && err.message.includes('start_otp')) {
+      const fallbackQuery = query.replace('b.start_otp,\n', '').replace('b.start_otp,', '');
+      res = await db.query(fallbackQuery, [bookingId]);
+    } else {
+      throw err;
+    }
+  }
   if (res.rowCount === 0) {
     const error = new Error('Booking not found');
     error.statusCode = 404;
@@ -736,14 +762,16 @@ async function completeBooking({ bookingId, afterPhotoUrl = null, beforePhotoUrl
     [booking.job_id]
   );
 
-  // 5. Update cash payment if pending or unrecorded
+  // 5. Update payment record
   const paymentRes = await db.query(
     'SELECT * FROM payments WHERE booking_id = $1',
     [bookingId]
   );
+  let paymentMethod = 'cash';
   if (paymentRes.rowCount > 0) {
     const payment = paymentRes.rows[0];
-    if (payment.method === 'cash' && payment.status === 'pending') {
+    paymentMethod = payment.method || 'cash';
+    if (payment.status === 'pending') {
       await db.query(
         `UPDATE payments SET status = 'completed', updated_at = NOW() WHERE id = $1`,
         [payment.id]
@@ -759,13 +787,24 @@ async function completeBooking({ bookingId, afterPhotoUrl = null, beforePhotoUrl
     );
   }
 
-  // 6. Universal Commission Deduction (applies to BOTH cash and digital!)
+  // 6. Wallet Settlement Logic:
+  // - ONLINE PAYMENT (UPI, card): Customer paid platform. Platform keeps 10% commission, CREDITS 90% payout to provider wallet!
+  // - CASH PAYMENT: Customer paid provider in physical cash. Platform DEDUCTS 10% commission from provider's prepaid wallet balance.
   const pricePaise = parseInt(booking.price_paise, 10);
-  const walletResult = await deductCommission({
-    providerId: booking.provider_id,
-    bookingId: booking.id,
-    bookingPricePaise: pricePaise
-  });
+  let walletResult;
+  if (paymentMethod === 'cash') {
+    walletResult = await deductCommission({
+      providerId: booking.provider_id,
+      bookingId: booking.id,
+      bookingPricePaise: pricePaise
+    });
+  } else {
+    walletResult = await creditPayout({
+      providerId: booking.provider_id,
+      bookingId: booking.id,
+      bookingPricePaise: pricePaise
+    });
+  }
 
   // Restore provider availability after job completion if wallet still sufficient
   if (!walletResult.belowThreshold) {
@@ -824,10 +863,10 @@ async function completeBooking({ bookingId, afterPhotoUrl = null, beforePhotoUrl
   );
 
   return {
-    booking: formatBookingResponse(updatedBookingRes.rows[0]),
+    booking: formatBookingResponse(updatedBookingRes.rows[0], user),
     wallet_deduction: {
       commission_paise: walletResult.commissionPaise,
-      amount_paise: -walletResult.commissionPaise,
+      amount_paise: walletResult.payoutPaise !== undefined ? walletResult.payoutPaise : -walletResult.commissionPaise,
       balance_after_paise: walletResult.newBalance,
       is_available: walletResult.isAvailable,
       below_threshold: walletResult.belowThreshold

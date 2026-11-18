@@ -286,7 +286,7 @@ describe('Module 6 - Task 4: Booking Completion & Universal Wallet Commission De
     expect(payment.method).toBe('cash');
   });
 
-  it('Scenario C Part 2 (Digital/UPI): Deducts identical 10% commission on digital payment completion', async () => {
+  it('Scenario C Part 2 (Digital/UPI): Credits 90% payout (retaining 10% platform commission) to provider wallet on digital payment completion', async () => {
     const { bookingId } = createTestBooking({ pricePaise: 40000 }); // ₹400 job
 
     // Customer paid via UPI
@@ -304,20 +304,21 @@ describe('Module 6 - Task 4: Booking Completion & Universal Wallet Commission De
     expect(res.status).toBe(200);
     expect(res.body.booking.status).toBe('completed');
 
-    // Commission verification: identical 4000 paise deduction
+    // Commission verification: 10% of 40000 = 4000 paise commission, 36000 paise payout credited
     expect(res.body.wallet_deduction.commission_paise).toBe(4000);
-    expect(res.body.wallet_deduction.amount_paise).toBe(-4000);
-    expect(res.body.wallet_deduction.balance_after_paise).toBe(46000);
+    expect(res.body.wallet_deduction.amount_paise).toBe(36000);
+    expect(res.body.wallet_deduction.balance_after_paise).toBe(86000); // 50000 + 36000
 
     const ledgerRows = memDb.public.many(`
       SELECT * FROM wallet_ledger WHERE provider_id = '${providerProfileId}'
     `);
     expect(ledgerRows.length).toBe(1);
-    expect(ledgerRows[0].amount_paise).toBe(-4000);
-    expect(ledgerRows[0].balance_after_paise).toBe(46000);
+    expect(ledgerRows[0].entry_type).toBe('payout');
+    expect(ledgerRows[0].amount_paise).toBe(36000);
+    expect(ledgerRows[0].balance_after_paise).toBe(86000);
   });
 
-  it('Scenario C Equality Gate: Asserts cash and digital commission deductions are mathematically identical', async () => {
+  it('Scenario C Equality Gate: Asserts 10% commission is identical across cash and digital payments', async () => {
     // 1. Cash run
     const bookingCash = createTestBooking({ pricePaise: 60000 });
     memDb.public.none(`
@@ -344,11 +345,17 @@ describe('Module 6 - Task 4: Booking Completion & Universal Wallet Commission De
       .set('Authorization', `Bearer ${providerToken}`)
       .send({});
 
-    // Equality Assertion: Cash vs Digital
+    // Equality Assertion: 10% platform commission is identical across both payment channels
     expect(resCash.body.wallet_deduction.commission_paise).toBe(resDigital.body.wallet_deduction.commission_paise);
-    expect(resCash.body.wallet_deduction.amount_paise).toBe(resDigital.body.wallet_deduction.amount_paise);
-    expect(resCash.body.wallet_deduction.balance_after_paise).toBe(resDigital.body.wallet_deduction.balance_after_paise);
     expect(resCash.body.wallet_deduction.commission_paise).toBe(6000); // 10% of 60000
+
+    // Cash payment: Provider collected 100% cash from customer, platform deducts 10% from wallet
+    expect(resCash.body.wallet_deduction.amount_paise).toBe(-6000);
+    expect(resCash.body.wallet_deduction.balance_after_paise).toBe(44000); // 50000 - 6000
+
+    // Digital payment: Platform collected 100% online, platform credits 90% payout to provider wallet
+    expect(resDigital.body.wallet_deduction.amount_paise).toBe(54000); // 60000 - 6000
+    expect(resDigital.body.wallet_deduction.balance_after_paise).toBe(104000); // 50000 + 54000
   });
 
   it('Threshold Check: Automatically flips is_available to false when balance drops below 10000 paise (₹100)', async () => {

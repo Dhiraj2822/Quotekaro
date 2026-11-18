@@ -432,21 +432,66 @@ class _ProviderJobFeedScreenState extends State<ProviderJobFeedScreen> {
                                     if (photos.isNotEmpty) ...[
                                       const SizedBox(height: 12),
                                       SizedBox(
-                                        height: 50,
+                                        height: 60,
                                         child: ListView.separated(
                                           scrollDirection: Axis.horizontal,
                                           itemCount: photos.length,
                                           separatorBuilder: (context, index) => const SizedBox(width: 8),
                                           itemBuilder: (ctx, pIdx) {
-                                            return Container(
-                                              width: 50,
-                                              height: 50,
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFFF1F5F9),
-                                                borderRadius: BorderRadius.circular(8),
-                                                border: Border.all(color: const Color(0xFFCBD5E1)),
+                                            final rawUrl = photos[pIdx]?.toString() ?? '';
+                                            final safeUrl = rawUrl.replaceFirst('http://', 'https://');
+                                            return InkWell(
+                                              onTap: () {
+                                                showDialog(
+                                                  context: context,
+                                                  builder: (dialogCtx) => Dialog(
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                                    child: Column(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        ClipRRect(
+                                                          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                                          child: Image.network(
+                                                            safeUrl,
+                                                            fit: BoxFit.contain,
+                                                            errorBuilder: (_, _, _) => const Padding(
+                                                              padding: EdgeInsets.all(32.0),
+                                                              child: Column(
+                                                                children: [
+                                                                  Icon(Icons.broken_image, size: 48, color: Colors.grey),
+                                                                  SizedBox(height: 8),
+                                                                  Text('Could not load photo preview', style: TextStyle(color: Colors.grey)),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        TextButton(
+                                                          onPressed: () => Navigator.pop(dialogCtx),
+                                                          child: const Text('Close'),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                              child: Container(
+                                                width: 60,
+                                                height: 60,
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFF1F5F9),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(color: const Color(0xFFCBD5E1)),
+                                                ),
+                                                clipBehavior: Clip.antiAlias,
+                                                child: Image.network(
+                                                  safeUrl,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (ctx, err, stack) => const Center(
+                                                    child: Icon(Icons.broken_image, size: 24, color: Colors.grey),
+                                                  ),
+                                                ),
                                               ),
-                                              child: const Icon(Icons.image_outlined, size: 24, color: primaryColor),
                                             );
                                           },
                                         ),

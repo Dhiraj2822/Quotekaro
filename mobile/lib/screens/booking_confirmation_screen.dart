@@ -148,52 +148,75 @@ class BookingConfirmationScreen extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // 1.5 Service Verification OTP Card
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFBFDBFE)),
+          // 1.5 Service Verification Card
+          if (isCustomer) ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: Row(
+                children: [
+                  const CircleAvatar(
+                    backgroundColor: Color(0xFF2563EB),
+                    radius: 18,
+                    child: Icon(Icons.password, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Service Security PIN',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E40AF)),
+                        ),
+                        Text(
+                          'Share this PIN with technician upon arrival to begin work',
+                          style: TextStyle(fontSize: 11, color: Color(0xFF475569)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF93C5FD)),
+                    ),
+                    child: Text(
+                      booking['start_otp']?.toString() ?? '------',
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 2, color: Color(0xFF1E40AF)),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  backgroundColor: Color(0xFF2563EB),
-                  radius: 18,
-                  child: Icon(Icons.password, color: Colors.white, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Service Security PIN',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E40AF)),
-                      ),
-                      const Text(
-                        'Share this PIN with technician upon arrival to begin work',
-                        style: TextStyle(fontSize: 11, color: Color(0xFF475569)),
-                      ),
-                    ],
+          ] else ...[
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFBBF7D0)),
+              ),
+              child: Row(
+                children: const [
+                  Icon(Icons.security, color: Color(0xFF16A34A), size: 22),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Ask customer for their 6-digit Security PIN upon arrival to verify and start service.',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF166534)),
+                    ),
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF93C5FD)),
-                  ),
-                  child: Text(
-                    booking['start_otp']?.toString() ?? '482910',
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 2, color: Color(0xFF1E40AF)),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
 
           const SizedBox(height: 16),
 

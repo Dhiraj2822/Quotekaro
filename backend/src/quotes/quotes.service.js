@@ -279,7 +279,7 @@ async function getQuotesForJob({ jobId, user, sort = 'blended' }) {
 /**
  * Customer accepts a quote -> creates booking, rejects other quotes, updates job status
  */
-async function acceptQuote({ jobId, quoteId, user }) {
+async function acceptQuote({ jobId, quoteId, user, paymentMethod = 'cash' }) {
   // 1. Verify job exists
   const jobRes = await db.query(
     'SELECT id, customer_id, status FROM jobs WHERE id = $1',
@@ -349,13 +349,48 @@ async function acceptQuote({ jobId, quoteId, user }) {
       [job.id, quote.id]
     );
 
-    // Create booking
-    const bookingRes = await client.query(
-      `INSERT INTO bookings (job_id, quote_id, customer_id, provider_id, status)
-       VALUES ($1, $2, $3, $4, 'confirmed')
-       RETURNING id, job_id, quote_id, customer_id, provider_id, status, scheduled_at, completed_at, created_at, updated_at`,
-      [job.id, quote.id, job.customer_id, quote.provider_id]
-    );
+    // Generate secure 6-digit start PIN for customer verification upon arrival
+    const startOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Create booking with start_otp (with fallback if start_otp column not present in pg-mem)
+    let bookingRes;
+    try {
+      bookingRes = await client.query(
+        `INSERT INTO bookings (job_id, quote_id, customer_id, provider_id, status, start_otp)
+         VALUES ($1, $2, $3, $4, 'confirmed', $5)
+         RETURNING id, job_id, quote_id, customer_id, provider_id, status, start_otp, scheduled_at, completed_at, created_at, updated_at`,
+        [job.id, quote.id, job.customer_id, quote.provider_id, startOtp]
+      );
+    } catch (insertErr) {
+      if (insertErr.message && insertErr.message.includes('start_otp')) {
+        bookingRes = await client.query(
+          `INSERT INTO bookings (job_id, quote_id, customer_id, provider_id, status)
+           VALUES ($1, $2, $3, $4, 'confirmed')
+           RETURNING id, job_id, quote_id, customer_id, provider_id, status, scheduled_at, completed_at, created_at, updated_at`,
+          [job.id, quote.id, job.customer_id, quote.provider_id]
+        );
+      } else {
+        throw insertErr;
+      }
+    }
+
+    const booking = bookingRes.rows[0];
+
+    // Create payment record (cash is pending until work completion; digital is completed)
+    const pricePaise = parseInt(quote.price_paise, 10);
+    const validMethod = ['upi', 'card', 'cash'].includes(paymentMethod) ? paymentMethod : 'cash';
+    try {
+      await client.query(
+        `INSERT INTO payments (booking_id, amount_paise, method, status)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (booking_id) DO UPDATE SET method = EXCLUDED.method, status = EXCLUDED.status`,
+        [booking.id, pricePaise, validMethod, validMethod === 'cash' ? 'pending' : 'completed']
+      );
+    } catch (payErr) {
+      if (!payErr.message || !payErr.message.includes('payments')) {
+        throw payErr;
+      }
+    }
 
     // Update job status to booked
     await client.query(

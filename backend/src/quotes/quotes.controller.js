@@ -33,7 +33,8 @@ async function handleAcceptQuote(req, res, next) {
     const booking = await quotesService.acceptQuote({
       jobId: req.params.id,
       quoteId: req.body.quote_id,
-      user: req.user
+      user: req.user,
+      paymentMethod: req.body.payment_method || 'cash'
     });
     return res.status(201).json({ booking });
   } catch (err) {

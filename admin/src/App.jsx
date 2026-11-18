@@ -1409,58 +1409,87 @@ function App() {
                 <div style={{
                   backgroundColor: '#F8FAFC',
                   borderRadius: 'var(--radius-btn)',
-                  padding: '20px',
-                  border: '1px dashed var(--border-color)',
+                  padding: '16px',
+                  border: '1px solid var(--border-color)',
                   textAlign: 'center',
                   marginBottom: '16px'
                 }}>
-                  <div style={{ fontSize: '40px', marginBottom: '8px' }}>📄</div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
-                    Secure Document File
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', wordBreak: 'break-all' }}>
-                    {previewDocUrl}
-                  </div>
-                </div>
+                  {previewDocUrl && (previewDocUrl.match(/\.(jpg|jpeg|png|webp|gif)$/i) || previewDocUrl.startsWith('data:image')) ? (
+                    <div>
+                      <img
+                        src={previewDocUrl}
+                        alt="KYC Document Preview"
+                        style={{
+                          maxWidth: '100%',
+                          maxHeight: '260px',
+                          borderRadius: '8px',
+                          border: '1px solid #E2E8F0',
+                          objectFit: 'contain',
+                          marginBottom: '8px'
+                        }}
+                      />
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', wordBreak: 'break-all' }}>
+                        {previewDocUrl}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ fontSize: '48px', marginBottom: '8px' }}>📄</div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
+                        KYC Government Document Verified
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', wordBreak: 'break-all', marginBottom: '8px' }}>
+                        {previewDocUrl}
+                      </div>
+                    </div>
+                  )}
 
-                <div style={{
-                  backgroundColor: '#FEF9C3',
-                  borderRadius: 'var(--radius-btn)',
-                  padding: '10px 14px',
-                  fontSize: '12px',
-                  color: '#854D0E',
-                  marginBottom: '16px'
-                }}>
-                  🔒 <strong>Security Policy (07_SECURITY.md §2):</strong> KYC documents are stored in private cloud storage. In production, this link resolves to a short-lived signed URL.
+                  <div style={{ marginTop: '12px', borderTop: '1px dashed #E2E8F0', paddingTop: '12px' }}>
+                    <label style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid var(--border-color)',
+                      padding: '6px 12px',
+                      borderRadius: 'var(--radius-btn)',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      color: 'var(--primary)'
+                    }}>
+                      📁 Upload / Replace Document
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              setPreviewDocUrl(reader.result);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                  <a
-                    href={previewDocUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{
-                      backgroundColor: 'var(--primary)',
-                      color: '#FFFFFF',
-                      padding: '8px 16px',
-                      borderRadius: 'var(--radius-btn)',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      textDecoration: 'none',
-                      display: 'inline-block'
-                    }}
-                  >
-                    Open External Link
-                  </a>
                   <button
                     onClick={() => setPreviewDocUrl(null)}
                     style={{
-                      backgroundColor: '#F1F5F9',
-                      color: 'var(--text-main)',
-                      padding: '8px 16px',
+                      backgroundColor: 'var(--primary)',
+                      color: '#FFFFFF',
+                      padding: '8px 20px',
                       borderRadius: 'var(--radius-btn)',
                       fontSize: '13px',
-                      fontWeight: 600
+                      fontWeight: 600,
+                      border: 'none',
+                      cursor: 'pointer'
                     }}
                   >
                     Close

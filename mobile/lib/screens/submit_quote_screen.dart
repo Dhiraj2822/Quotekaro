@@ -272,7 +272,7 @@ class _SubmitQuoteScreenState extends State<SubmitQuoteScreen> {
                 decoration: InputDecoration(
                   prefixText: '₹ ',
                   prefixStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: primaryColor),
-                  hintText: 'e.g. 450',
+                  hintText: '0',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                 ),
@@ -353,7 +353,7 @@ class _SubmitQuoteScreenState extends State<SubmitQuoteScreen> {
                 maxLines: 3,
                 maxLength: 300,
                 decoration: InputDecoration(
-                  hintText: 'e.g. Carrying standard spare parts, includes 30-day warranty on labor.',
+                  hintText: 'Add warranty, terms, or note for customer (optional)',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 ),

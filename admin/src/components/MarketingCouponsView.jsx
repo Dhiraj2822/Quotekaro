@@ -113,7 +113,7 @@ export default function MarketingCouponsView({ adminToken, showToast }) {
               <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Promo Code:</label>
               <input
                 type="text"
-                placeholder="e.g. DIWALI30"
+                placeholder="PROMO CODE"
                 value={newCode}
                 onChange={(e) => setNewCode(e.target.value.toUpperCase())}
                 style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace' }}
@@ -123,7 +123,7 @@ export default function MarketingCouponsView({ adminToken, showToast }) {
               <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Title / Campaign:</label>
               <input
                 type="text"
-                placeholder="e.g. Festival Home Deep Clean"
+                placeholder="Campaign title"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '13px' }}
@@ -145,7 +145,7 @@ export default function MarketingCouponsView({ adminToken, showToast }) {
                 <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Value ({discountType === 'flat' ? '₹' : '%'}):</label>
                 <input
                   type="number"
-                  placeholder={discountType === 'flat' ? '100' : '20'}
+                  placeholder="0"
                   value={discountVal}
                   onChange={(e) => setDiscountVal(e.target.value)}
                   style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '13px' }}
@@ -156,7 +156,7 @@ export default function MarketingCouponsView({ adminToken, showToast }) {
               <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Minimum Order (₹):</label>
               <input
                 type="number"
-                placeholder="e.g. 499"
+                placeholder="0"
                 value={minOrder}
                 onChange={(e) => setMinOrder(e.target.value)}
                 style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '13px' }}

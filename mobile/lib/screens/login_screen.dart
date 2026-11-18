@@ -346,7 +346,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         onSubmitted: (_) =>
                             _otpSent ? null : _handleRequestOtp(),
                         decoration: InputDecoration(
-                          hintText: 'you@example.com',
+                          hintText: 'Enter email address',
                           prefixIcon:
                               const Icon(Icons.email_outlined, size: 20),
                           border: OutlineInputBorder(
@@ -383,7 +383,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           textInputAction: TextInputAction.done,
                           onSubmitted: (_) => _handleVerifyOtp(),
                           decoration: InputDecoration(
-                            hintText: '123456',
+                            hintText: '••••••',
                             prefixIcon: const Icon(
                                 Icons.lock_clock_outlined,
                                 size: 20),

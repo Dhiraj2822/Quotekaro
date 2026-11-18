@@ -208,7 +208,7 @@ class _PhoneSetupScreenState extends State<PhoneSetupScreen> {
                       enabled: !_isLoading,
                       keyboardType: TextInputType.phone,
                       decoration: InputDecoration(
-                        hintText: '98765 43210',
+                        hintText: 'Enter 10-digit number',
                         prefixText: '+91  ',
                         prefixStyle: const TextStyle(
                             fontWeight: FontWeight.w600,

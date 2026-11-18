@@ -522,7 +522,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
               controller: _descriptionController,
               maxLines: 3,
               decoration: const InputDecoration(
-                hintText: 'Describe the issue or requirements (e.g. Kitchen tap leaking under sink, needs washer replacement)',
+                hintText: 'Describe the issue or requirements in detail',
                 border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
               ),
               validator: (val) {
@@ -677,8 +677,8 @@ class _PostJobScreenState extends State<PostJobScreen> {
                   child: TextFormField(
                     controller: _newPhotoUrlController,
                     decoration: const InputDecoration(
-                      hintText: 'https://...',
-                      labelText: 'Or enter image URL',
+                      hintText: 'Enter image URL',
+                      labelText: 'Image URL',
                       border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
                       contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                       isDense: true,

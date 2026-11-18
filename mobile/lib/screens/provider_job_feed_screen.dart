@@ -213,7 +213,7 @@ class _ProviderJobFeedScreenState extends State<ProviderJobFeedScreen> {
                 controller: messageController,
                 maxLines: 2,
                 decoration: const InputDecoration(
-                  hintText: 'e.g. Carrying replacement washers & pipe sealer',
+                  hintText: 'Add note for customer (optional)',
                   border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
                   contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),

@@ -118,7 +118,7 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
                         TextFormField(
                           controller: _brandController,
                           decoration: InputDecoration(
-                            hintText: 'e.g. Daikin, LG, Kent',
+                            hintText: 'Enter brand name',
                             hintStyle: const TextStyle(fontSize: 12),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -138,7 +138,7 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
                         TextFormField(
                           controller: _modelController,
                           decoration: InputDecoration(
-                            hintText: 'e.g. 1.5 Ton 5-Star',
+                            hintText: 'Enter model or capacity',
                             hintStyle: const TextStyle(fontSize: 12),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -158,7 +158,7 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
               TextFormField(
                 controller: _propertyController,
                 decoration: InputDecoration(
-                  hintText: 'e.g. Main Residence - Master Bed',
+                  hintText: 'Enter room or property location',
                   hintStyle: const TextStyle(fontSize: 12),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -252,7 +252,7 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
                 controller: _notesController,
                 maxLines: 2,
                 decoration: InputDecoration(
-                  hintText: 'Any known past repairs or cooling performance remarks...',
+                  hintText: 'Add remarks or past repair history (optional)',
                   hintStyle: const TextStyle(fontSize: 12),
                   contentPadding: const EdgeInsets.all(12),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),

@@ -129,7 +129,7 @@ class _WalletScreenState extends State<WalletScreen> {
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
                 prefixText: '₹ ',
-                hintText: 'e.g. 250',
+                hintText: 'Enter amount',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),

@@ -592,7 +592,7 @@ function App() {
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSendEmailOtp()}
-                  placeholder="admin@quotekaro.com"
+                  placeholder="Enter admin email"
                   autoComplete="email"
                   style={{
                     width: '100%', padding: '12px 14px', borderRadius: '8px',
@@ -629,7 +629,7 @@ function App() {
                   value={loginOtp}
                   onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   onKeyDown={(e) => e.key === 'Enter' && loginOtp.length === 6 && handleVerifyEmailOtp()}
-                  placeholder="123456"
+                  placeholder="••••••"
                   maxLength={6}
                   autoComplete="one-time-code"
                   style={{
@@ -674,7 +674,7 @@ function App() {
                   type="text"
                   value={manualToken}
                   onChange={(e) => setManualToken(e.target.value)}
-                  placeholder="eyJhbGciOiJIUzI1..."
+                  placeholder="Paste admin JWT token"
                   style={{
                     flex: 1, padding: '8px 10px', borderRadius: '6px',
                     border: '1px solid #D1D5DB', fontSize: '12px', outline: 'none'
@@ -1381,7 +1381,7 @@ function App() {
                 <textarea
                   rows={3}
                   required
-                  placeholder="e.g. Identity proof scan is blurry; Name does not match certificate..."
+                  placeholder="Specify reason for KYC rejection..."
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   style={{

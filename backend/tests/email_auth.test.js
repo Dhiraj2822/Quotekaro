@@ -8,6 +8,7 @@ describe('Email OTP Authentication & Production Phone Linking', () => {
   let memDb;
 
   beforeAll(() => {
+    process.env.ALLOW_DEV_OTP = 'true';
     memDb = newDb();
     memDb.public.registerFunction({
       name: 'gen_random_uuid',

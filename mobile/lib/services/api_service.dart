@@ -1105,11 +1105,21 @@ class ApiService {
   /// Request Email OTP
   static Future<Map<String, dynamic>> requestEmailOtp(String email) async {
     final url = Uri.parse('$baseUrl/auth/email/otp/request');
-    final response = await client.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email.trim().toLowerCase()}),
-    );
+    final payload = jsonEncode({'email': email.trim().toLowerCase()});
+    final headers = {'Content-Type': 'application/json'};
+
+    http.Response response;
+    try {
+      response = await client.post(url, headers: headers, body: payload).timeout(const Duration(seconds: 45));
+    } catch (_) {
+      // Retry with a fresh connection in case mobile socket was aborted/sleeping
+      try {
+        response = await http.post(url, headers: headers, body: payload).timeout(const Duration(seconds: 45));
+      } catch (retryErr) {
+        throw Exception('Unable to reach server. Please check your connection and try again.');
+      }
+    }
+
     final data = jsonDecode(response.body);
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return data;
@@ -1124,15 +1134,24 @@ class ApiService {
     required String role,
   }) async {
     final url = Uri.parse('$baseUrl/auth/email/otp/verify');
-    final response = await client.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email.trim().toLowerCase(),
-        'otp': otp.trim(),
-        'role': role,
-      }),
-    );
+    final payload = jsonEncode({
+      'email': email.trim().toLowerCase(),
+      'otp': otp.trim(),
+      'role': role,
+    });
+    final headers = {'Content-Type': 'application/json'};
+
+    http.Response response;
+    try {
+      response = await client.post(url, headers: headers, body: payload).timeout(const Duration(seconds: 45));
+    } catch (_) {
+      try {
+        response = await http.post(url, headers: headers, body: payload).timeout(const Duration(seconds: 45));
+      } catch (retryErr) {
+        throw Exception('Unable to reach server. Please check your connection and try again.');
+      }
+    }
+
     final data = jsonDecode(response.body);
     if (response.statusCode >= 200 && response.statusCode < 300) {
       currentToken = data['token'];

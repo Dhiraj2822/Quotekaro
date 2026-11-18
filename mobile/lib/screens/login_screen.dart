@@ -151,21 +151,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String _friendlyError(Object e) {
     final raw = e.toString().replaceFirst('Exception: ', '');
+    final lower = raw.toLowerCase();
     // Map known developer-style messages → friendly alternatives
-    if (raw.contains('Rate limit') || raw.contains('Too many')) {
+    if (lower.contains('rate limit') || lower.contains('too many')) {
       return 'Too many attempts. Please wait a moment before trying again.';
     }
-    if (raw.contains('Invalid') && raw.contains('expired')) {
+    if (lower.contains('invalid') && lower.contains('expired')) {
       return 'The code you entered is incorrect or has expired. Please request a new one.';
     }
-    if (raw.contains('deactivated')) {
+    if (lower.contains('deactivated')) {
       return 'Your account has been deactivated. Please contact support@quotekaro.com.';
     }
-    if (raw.contains('network') || raw.contains('SocketException') || raw.contains('Connection')) {
-      return 'Could not connect to the server. Please check your internet connection and try again.';
+    if (lower.contains('network') ||
+        lower.contains('socketexception') ||
+        lower.contains('connection') ||
+        lower.contains('clientsoftware') ||
+        lower.contains('abort') ||
+        lower.contains('failed host lookup') ||
+        lower.contains('handshake') ||
+        lower.contains('uri=') ||
+        lower.contains('clientexception')) {
+      return 'Unable to connect to server. The server may be waking up. Please try again in a few seconds.';
     }
-    if (raw.contains('timeout') || raw.contains('TimeoutException')) {
-      return 'The request timed out. Please try again.';
+    if (lower.contains('timeout')) {
+      return 'The server took too long to respond. Please try again.';
     }
     // If the message is already user-friendly (from backend), pass it through
     if (raw.length < 150 && !raw.contains('Exception') && !raw.contains('Error:')) {

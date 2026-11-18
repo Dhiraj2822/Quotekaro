@@ -21,6 +21,7 @@ class QuoteKaroApp extends StatefulWidget {
 }
 
 class _QuoteKaroAppState extends State<QuoteKaroApp> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   Map<String, dynamic>? _currentUser;
   String? _token;
   String _activeRole = 'customer'; // 'customer' or 'provider'
@@ -35,6 +36,7 @@ class _QuoteKaroAppState extends State<QuoteKaroApp> {
 
   void _onLogout() {
     ApiService.logout();
+    _navigatorKey.currentState?.popUntil((route) => route.isFirst);
     setState(() {
       _currentUser = null;
       _token = null;
@@ -44,6 +46,7 @@ class _QuoteKaroAppState extends State<QuoteKaroApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       title: 'QuoteKaro',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),

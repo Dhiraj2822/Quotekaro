@@ -107,6 +107,27 @@ class ApiService {
     }
   }
 
+  /// Update user profile details (name, email, city)
+  static Future<Map<String, dynamic>> updateUser(String userId, Map<String, dynamic> updates) async {
+    final url = Uri.parse('$baseUrl/users/$userId');
+    final response = await client.patch(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        if (currentToken != null) 'Authorization': 'Bearer $currentToken',
+      },
+      body: jsonEncode(updates),
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (data['user'] != null) currentUser = data['user'];
+      return data;
+    } else {
+      throw Exception(data['error']?['message'] ?? 'Failed to update profile');
+    }
+  }
+
   /// Submit KYC document for provider
   static Future<Map<String, dynamic>> submitKyc(String documentUrl) async {
     final url = Uri.parse('$baseUrl/providers/kyc');

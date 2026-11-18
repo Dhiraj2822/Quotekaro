@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import 'help_support_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -13,6 +14,8 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   List<dynamic> _addresses = [];
+  late Map<String, dynamic> _userData;
+  bool _isSavingProfile = false;
 
   static const Color primaryColor = Color(0xFF1F3864);
   static const Color accentColor = Color(0xFF548235);
@@ -20,6 +23,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _userData = Map<String, dynamic>.from(widget.user);
     _loadAddresses();
   }
 
@@ -31,8 +35,134 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _addresses = list;
         });
       }
-    } catch (_) {
-    }
+    } catch (_) {}
+  }
+
+  void _showEditProfileDialog() {
+    final nameCtrl = TextEditingController(text: _userData['name'] ?? '');
+    final emailCtrl = TextEditingController(text: _userData['email'] ?? '');
+    final cityCtrl = TextEditingController(text: _userData['city'] ?? 'Pune');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.edit_outlined, color: primaryColor, size: 20),
+              SizedBox(width: 8),
+              Text('Edit Profile', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Full Name', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryColor)),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(
+                    hintText: 'e.g. Rahul Sharma',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text('Email Address', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryColor)),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    hintText: 'e.g. rahul@example.com',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text('City / Operational Area', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryColor)),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: cityCtrl,
+                  decoration: InputDecoration(
+                    hintText: 'e.g. Pune',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: _isSavingProfile ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: _isSavingProfile
+                  ? null
+                  : () async {
+                      final newName = nameCtrl.text.trim();
+                      final newEmail = emailCtrl.text.trim();
+                      final newCity = cityCtrl.text.trim();
+
+                      if (newName.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Name cannot be empty')),
+                        );
+                        return;
+                      }
+
+                      setModalState(() => _isSavingProfile = true);
+                      try {
+                        final userId = _userData['id']?.toString() ?? '';
+                        final payload = <String, dynamic>{
+                          'name': newName,
+                          if (newEmail.isNotEmpty) 'email': newEmail,
+                          if (newCity.isNotEmpty) 'city': newCity,
+                        };
+
+                        if (userId.isNotEmpty) {
+                          await ApiService.updateUser(userId, payload);
+                        }
+
+                        if (mounted) {
+                          setState(() {
+                            _userData['name'] = newName;
+                            if (newEmail.isNotEmpty) _userData['email'] = newEmail;
+                            if (newCity.isNotEmpty) _userData['city'] = newCity;
+                          });
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              backgroundColor: accentColor,
+                              content: Text('Profile updated successfully!'),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setModalState(() => _isSavingProfile = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: Colors.red,
+                              content: Text(e.toString().replaceFirst('Exception: ', '')),
+                            ),
+                          );
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(backgroundColor: primaryColor, foregroundColor: Colors.white),
+              child: _isSavingProfile
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Save Changes'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showAddAddressDialog() {
@@ -83,24 +213,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _confirmDeleteAccount() {
+  void _confirmSignOut() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Account', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-        content: const Text(
-          'Are you sure you want to delete your QuoteKaro account? All active subscriptions, registered appliances, and booking histories will be permanently deactivated.',
-          style: TextStyle(fontSize: 13),
-        ),
+        title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text('Are you sure you want to sign out of QuoteKaro? You will return to the login screen.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
+              // Clear entire navigation stack and return directly to root login
+              Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
               widget.onLogout();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-            child: const Text('Confirm Deactivate'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade800, foregroundColor: Colors.white),
+            child: const Text('Sign Out'),
           ),
         ],
       ),
@@ -109,20 +238,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final name = widget.user['name'] ?? 'QuoteKaro Member';
-    final phone = widget.user['phone_number'] ?? '';
-    final email = widget.user['email'] ?? 'member@quotekaro.com';
-    final role = widget.user['role'] ?? 'customer';
+    final name = _userData['name'] ?? 'QuoteKaro Member';
+    final phone = _userData['phone_number'] ?? '';
+    final email = _userData['email'] ?? 'member@quotekaro.com';
+    final city = _userData['city'] ?? 'Pune';
+    final role = _userData['role'] ?? 'customer';
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Account & Preferences', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Edit Profile',
+            onPressed: _showEditProfileDialog,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // User Avatar Card
+            // User Avatar Card with Edit action
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -130,34 +267,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade300),
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: primaryColor,
-                    child: Text(
-                      name.isNotEmpty ? name[0].toUpperCase() : 'Q',
-                      style: const TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 30,
+                        backgroundColor: primaryColor,
+                        child: Text(
+                          name.isNotEmpty ? name[0].toUpperCase() : 'Q',
+                          style: const TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primaryColor)),
+                            const SizedBox(height: 2),
+                            Text(phone, style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontFamily: 'monospace')),
+                            Text(email, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                            if (city.isNotEmpty)
+                              Row(
+                                children: [
+                                  const Icon(Icons.location_on, size: 12, color: accentColor),
+                                  const SizedBox(width: 2),
+                                  Text(city, style: const TextStyle(fontSize: 11, color: accentColor, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(6)),
+                        child: Text(
+                          role.toUpperCase(),
+                          style: const TextStyle(color: Color(0xFF15803D), fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primaryColor)),
-                        const SizedBox(height: 2),
-                        Text(phone, style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontFamily: 'monospace')),
-                        Text(email, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(6)),
-                    child: Text(
-                      role.toUpperCase(),
-                      style: const TextStyle(color: Color(0xFF15803D), fontSize: 10, fontWeight: FontWeight.bold),
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: _showEditProfileDialog,
+                    borderRadius: BorderRadius.circular(6),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.edit_note, size: 18, color: primaryColor),
+                          SizedBox(width: 6),
+                          Text('Edit Profile Information', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -202,27 +369,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
-            // Logout & Account Actions
+            // Help & Support Shortcut
             ListTile(
-              onTap: widget.onLogout,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => HelpSupportScreen(user: _userData)),
+                );
+              },
               tileColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: Colors.grey.shade300)),
-              leading: const Icon(Icons.logout, color: Colors.orange),
-              title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              leading: const Icon(Icons.help_outline, color: primaryColor),
+              title: const Text('Help & Support', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              subtitle: const Text('FAQs, helpline, and dispute assistance', style: TextStyle(fontSize: 11, color: Colors.grey)),
               trailing: const Icon(Icons.chevron_right),
             ),
 
             const SizedBox(height: 12),
 
+            // Logout Action (Clean redirect to login)
             ListTile(
-              onTap: _confirmDeleteAccount,
+              onTap: _confirmSignOut,
               tileColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: Colors.grey.shade300)),
-              leading: const Icon(Icons.delete_forever, color: Colors.red),
-              title: const Text('Delete Account', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.red)),
-              trailing: const Icon(Icons.chevron_right, color: Colors.red),
+              leading: const Icon(Icons.logout, color: Colors.orange),
+              title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.orange)),
+              subtitle: const Text('Safely log out of your QuoteKaro session', style: TextStyle(fontSize: 11, color: Colors.grey)),
+              trailing: const Icon(Icons.chevron_right),
             ),
 
             const SizedBox(height: 40),
@@ -232,4 +407,3 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
-

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import 'provider_kyc_screen.dart';
@@ -18,6 +18,7 @@ import 'ai_maintenance_screen.dart';
 import 'support_chatbot_screen.dart';
 import 'profile_screen.dart';
 import 'notifications_screen.dart';
+import 'help_support_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -108,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final role = widget.user['role'] ?? 'customer';
     final isCustomer = role == 'customer';
 
-    // ── Provider users get the fully-redesigned dashboard ─────────────────
+    // â”€â”€ Provider users get the fully-redesigned dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (!isCustomer) {
       return ProviderDashboardScreen(
         user: widget.user,
@@ -192,6 +193,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     builder: (_) => ProfileScreen(user: widget.user, onLogout: widget.onLogout),
                   ));
                   break;
+                case 'help':
+                  Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => HelpSupportScreen(user: widget.user),
+                  ));
+                  break;
                 case 'ai':
                   Navigator.push(context, MaterialPageRoute(
                     builder: (_) => SupportChatbotScreen(user: widget.user),
@@ -201,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _loadData();
                   break;
                 case 'logout':
-                  widget.onLogout();
+                  _showLogoutDialog();
                   break;
               }
             },
@@ -209,6 +215,10 @@ class _HomeScreenState extends State<HomeScreen> {
               const PopupMenuItem<String>(
                 value: 'profile',
                 child: Row(children: [Icon(Icons.account_circle_outlined, size: 18), SizedBox(width: 10), Text('Profile & Addresses')]),
+              ),
+              const PopupMenuItem<String>(
+                value: 'help',
+                child: Row(children: [Icon(Icons.help_outline, size: 18), SizedBox(width: 10), Text('Help & Support')]),
               ),
               if (isCustomer)
                 const PopupMenuItem<String>(
@@ -272,11 +282,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   label: 'Bookings',
                 ),
-                const NavigationDestination(
-                  icon: Icon(Icons.science_outlined),
-                  selectedIcon: Icon(Icons.science, color: HomeScreen.primaryColor),
-                  label: 'Demo Cases',
-                ),
               ],
             )
           : null,
@@ -295,7 +300,6 @@ class _HomeScreenState extends State<HomeScreen> {
               if (_selectedNavIndex == 0) _buildCustomerServicesTab(),
               if (_selectedNavIndex == 1) _buildCustomerJobsTab(),
               if (_selectedNavIndex == 2) _buildCustomerBookingsTab(),
-              if (_selectedNavIndex == 3) _buildDemoScenariosTab(),
             ] else ...[
               _buildProviderOperations(),
             ],
@@ -305,6 +309,28 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     ),
+    );
+  }
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text('Are you sure you want to sign out of QuoteKaro? You will return to the login screen.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
+              widget.onLogout();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Sign Out'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -400,7 +426,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. City / Service Area Picker per 06_UIUX_SPEC.md §2
+        // 1. City / Service Area Picker per 06_UIUX_SPEC.md Â§2
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
@@ -436,7 +462,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         const SizedBox(height: 16),
 
-        // 2. Emergency Instant Routing CTA (03_SYSTEM_DESIGN.md §4 & 06_UIUX_SPEC.md §2)
+        // 2. Emergency Instant Routing CTA (03_SYSTEM_DESIGN.md Â§4 & 06_UIUX_SPEC.md Â§2)
         Container(
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -489,7 +515,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const Spacer(),
-                        const Text('⚡ Rapid Auto-Match', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                        const Text('âš¡ Rapid Auto-Match', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -626,7 +652,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const Spacer(),
-                        const Text('Starts ₹199/mo', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                        const Text('Starts â‚¹199/mo', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -690,7 +716,7 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisCount: 2,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            mainAxisExtent: 110, // fixed px height – no overflow
+            mainAxisExtent: 110, // fixed px height â€“ no overflow
           ),
           itemCount: 6,
           itemBuilder: (ctx, index) {
@@ -728,32 +754,32 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _buildPopularServicePill(
                 title: 'Full Home Deep Clean',
-                price: '₹2,499',
-                rating: '4.88 ★',
+                price: 'â‚¹2,499',
+                rating: '4.88 â˜…',
                 slug: 'full-home-deep-cleaning',
                 icon: Icons.cleaning_services,
                 color: Colors.purple,
               ),
               _buildPopularServicePill(
                 title: 'AC Jet Foam Servicing',
-                price: '₹599',
-                rating: '4.93 ★',
+                price: 'â‚¹599',
+                rating: '4.93 â˜…',
                 slug: 'ac-repair-servicing',
                 icon: Icons.ac_unit,
                 color: Colors.blue,
               ),
               _buildPopularServicePill(
                 title: 'Tap Repair & Leak Fix',
-                price: '₹199',
-                rating: '4.89 ★',
+                price: 'â‚¹199',
+                rating: '4.89 â˜…',
                 slug: 'tap-repair',
                 icon: Icons.plumbing,
                 color: Colors.cyan,
               ),
               _buildPopularServicePill(
                 title: 'Ceiling Fan Installation',
-                price: '₹199',
-                rating: '4.92 ★',
+                price: 'â‚¹199',
+                rating: '4.92 â˜…',
                 slug: 'fan-repair',
                 icon: Icons.electrical_services,
                 color: Colors.orange,
@@ -774,7 +800,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('🛡️ How QuoteKaro Protects Homeowners', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: HomeScreen.primaryColor)),
+                const Text('ðŸ›¡ï¸ How QuoteKaro Protects Homeowners', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: HomeScreen.primaryColor)),
                 const SizedBox(height: 8),
                 _buildValuePropRow(Icons.balance, 'Blended Scoring', 'Quality & honesty are balanced with price so cheap outliers don\'t win unfairly.'),
                 const SizedBox(height: 6),
@@ -956,7 +982,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Get Quotes →',
+                'Get Quotes â†’',
                 style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color),
               ),
             ],
@@ -1051,7 +1077,7 @@ class _HomeScreenState extends State<HomeScreen> {
     String statusLabel = 'OPEN FOR BIDS';
     if (status == 'quoted') {
       statusColor = HomeScreen.accentColor;
-      statusLabel = '⚡ QUOTES RECEIVED';
+      statusLabel = 'âš¡ QUOTES RECEIVED';
     } else if (status == 'booked' || status == 'in_progress') {
       statusColor = Colors.orange.shade800;
       statusLabel = 'ASSIGNED & BOOKED';
@@ -1267,7 +1293,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Total Amount: ₹$priceRupees', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: HomeScreen.primaryColor)),
+                Text('Total Amount: â‚¹$priceRupees', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: HomeScreen.primaryColor)),
                 Text('Payment: ${booking['payment_method'] ?? 'Pending'}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
               ],
             ),
@@ -1345,113 +1371,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ===========================================================================
-  // CUSTOMER TAB 3: JURY DEMO TEST CASES & ACCOUNTS
-  // ===========================================================================
-  Widget _buildDemoScenariosTab() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Jury Evaluation Accounts & Flows',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Log in with any of these pre-seeded customer accounts (OTP 123456) to demonstrate specific PBL grading criteria:',
-          style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-        ),
-        const SizedBox(height: 14),
-
-        _buildScenarioCard(
-          title: 'Scenario A: Planned Job & Blended Sorting',
-          customerName: 'Kavita Patil',
-          phone: '+919999900010',
-          badge: 'Bidding Engine',
-          badgeColor: HomeScreen.primaryColor,
-          description: 'Has an active 3BHK Painting job with 3 submitted provider quotes. Test side-by-side comparison, blended score weighting (ratings vs price), and accept quote.',
-        ),
-
-        const SizedBox(height: 10),
-
-        _buildScenarioCard(
-          title: 'Scenario B: Urgent Emergency Auto-Match',
-          customerName: 'Rahul Deshmukh',
-          phone: '+919999900020',
-          badge: 'Rapid Routing',
-          badgeColor: const Color(0xFFB45309),
-          description: 'Has an urgent Burst Pipe plumbing emergency with Ramesh Plumber already auto-dispatched. Test live map tracking, ETA countdown, and in-app chat.',
-        ),
-
-        const SizedBox(height: 10),
-
-        _buildScenarioCard(
-          title: 'Scenario C: Cash Leakage & 3-Axis Ratings',
-          customerName: 'Pooja Kulkarni',
-          phone: '+919999900030',
-          badge: 'Anti-Disintermediation',
-          badgeColor: HomeScreen.accentColor,
-          description: 'Has a completed cash job. Test 3-axis review (Honesty, Punctuality, Quality), photo proof-of-work upload, and inspect the provider\'s wallet ledger for the 10% auto-deduction.',
-        ),
-
-        const SizedBox(height: 16),
-
-        Center(
-          child: TextButton.icon(
-            icon: const Icon(Icons.logout),
-            label: const Text('Log Out to Switch Account'),
-            onPressed: widget.onLogout,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildScenarioCard({
-    required String title,
-    required String customerName,
-    required String phone,
-    required String badge,
-    required Color badgeColor,
-    required String description,
-  }) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: badgeColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(badge, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: badgeColor)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text('Account: $customerName ($phone)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 4),
-            Text(description, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ===========================================================================
-  // PROVIDER OPERATIONS (Legacy – providers now use ProviderDashboardScreen)
+  // PROVIDER OPERATIONS (Legacy â€“ providers now use ProviderDashboardScreen)
   // Kept for fallback / testing. All developer text removed.
   // ===========================================================================
   Widget _buildProviderOperations() {

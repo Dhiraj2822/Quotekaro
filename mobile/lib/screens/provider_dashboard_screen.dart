@@ -24,6 +24,7 @@ import 'wallet_screen.dart';
 import 'booking_confirmation_screen.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
+import 'help_support_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Dashboard
@@ -120,6 +121,10 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
         if (profile['categories'] != null && profile['categories'] is List) {
           _providerCategories = List<String>.from(profile['categories'].map((e) => e.toString()));
         }
+        // Read live KYC status from server (not stale login data)
+        if (profile['kyc_status'] != null) {
+          _kycStatus = profile['kyc_status'].toString();
+        }
       }
 
       // Build recent activity list from bookings + notifs
@@ -176,7 +181,9 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
         _unreadNotifications =
             notifs.where((n) => n['is_read'] == false).length;
         _rating = 4.8; // from ratings API if available
-        _kycStatus = widget.user['kyc_status']?.toString() ?? 'pending';
+        _kycStatus = profile.isNotEmpty && profile['kyc_status'] != null
+            ? profile['kyc_status'].toString()
+            : widget.user['kyc_status']?.toString() ?? 'pending';
         _recentActivity = activity.take(3).toList();
         _isLoading = false;
       });
@@ -345,6 +352,8 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
             ),
             onPressed: () {
               Navigator.pop(ctx);
+              Navigator.of(context, rootNavigator: true)
+                  .popUntil((route) => route.isFirst);
               widget.onLogout();
             },
             child: const Text(AppStrings.logoutConfirm),
@@ -358,7 +367,6 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? AppColors.darkBackground : AppColors.background;
     final phone =
@@ -500,9 +508,11 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
                 );
                 break;
               case 'help':
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Opening Help & Support…')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => HelpSupportScreen(user: widget.user),
+                  ),
                 );
                 break;
               case 'logout':
@@ -698,7 +708,7 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
 
   Widget _buildBody(
       BuildContext context, bool isDark, String name, String phone) {
-    final kycIncomplete = _kycStatus != 'verified';
+    final kycIncomplete = _kycStatus != 'verified' && _kycStatus != 'approved';
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.screenPadding,

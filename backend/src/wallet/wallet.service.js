@@ -83,7 +83,7 @@ async function topupWallet({ providerProfileId, amountPaise, method = 'upi' }) {
   }
 
   const providerRes = await db.query(
-    'SELECT id, wallet_balance_paise, is_available, kyc_status FROM provider_profiles WHERE id = $1',
+    'SELECT id, wallet_balance_paise, is_available, kyc_status FROM provider_profiles WHERE id = $1 OR user_id = $1',
     [providerProfileId]
   );
 
@@ -111,7 +111,7 @@ async function topupWallet({ providerProfileId, amountPaise, method = 'upi' }) {
     `UPDATE provider_profiles 
      SET wallet_balance_paise = $1, is_available = $2, updated_at = NOW() 
      WHERE id = $3`,
-    [newBalance, newIsAvailable, providerProfileId]
+    [newBalance, newIsAvailable, provider.id]
   );
 
   const ledgerRes = await db.query(
@@ -133,7 +133,7 @@ async function topupWallet({ providerProfileId, amountPaise, method = 'upi' }) {
  */
 async function getWalletByProviderId({ providerProfileId, user = null }) {
   const providerRes = await db.query(
-    'SELECT id, user_id, wallet_balance_paise, is_available FROM provider_profiles WHERE id = $1',
+    'SELECT id, user_id, wallet_balance_paise, is_available FROM provider_profiles WHERE id = $1 OR user_id = $1',
     [providerProfileId]
   );
 
@@ -159,7 +159,7 @@ async function getWalletByProviderId({ providerProfileId, user = null }) {
      FROM wallet_ledger 
      WHERE provider_id = $1 
      ORDER BY created_at DESC`,
-    [providerProfileId]
+    [provider.id]
   );
 
   return {

@@ -57,6 +57,8 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
   double _walletBalance = 0.0;
   double _rating = 0.0;
   String _kycStatus = 'pending'; // 'verified' | 'pending' | 'offline'
+  String _providerProfileId = '';
+  List<String> _providerCategories = [];
   List<Map<String, dynamic>> _recentActivity = [];
   String? _errorMessage;
   DateTime? _lastBackPressTime;
@@ -92,6 +94,7 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
     try {
       final providerProfileId =
           widget.user['provider_profile_id'] ?? widget.user['id'] ?? '';
+      _providerProfileId = providerProfileId.toString();
 
       // Fire all requests in parallel; fall back gracefully on failure
       final results = await Future.wait([
@@ -100,12 +103,24 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
         ApiService.getProviderWallet(providerProfileId.toString())
             .catchError((_) => <String, dynamic>{}),
         ApiService.getNotifications().catchError((_) => <dynamic>[]),
+        ApiService.getProviderProfile(providerProfileId.toString())
+            .catchError((_) => <String, dynamic>{}),
       ]);
 
       final jobs = results[0] as List<dynamic>;
       final bookings = results[1] as List<dynamic>;
       final wallet = results[2] as Map<String, dynamic>;
       final notifs = results[3] as List<dynamic>;
+      final profile = results[4] as Map<String, dynamic>;
+
+      if (profile.isNotEmpty) {
+        if (profile['id'] != null) {
+          _providerProfileId = profile['id'].toString();
+        }
+        if (profile['categories'] != null && profile['categories'] is List) {
+          _providerCategories = List<String>.from(profile['categories'].map((e) => e.toString()));
+        }
+      }
 
       // Build recent activity list from bookings + notifs
       final activity = <Map<String, dynamic>>[];
@@ -237,7 +252,11 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
     HapticFeedback.lightImpact();
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const ProviderJobFeedScreen()),
+      MaterialPageRoute(
+        builder: (_) => ProviderJobFeedScreen(
+          providerCategories: _providerCategories.isNotEmpty ? _providerCategories : null,
+        ),
+      ),
     ).then((_) => _loadDashboard());
   }
 
@@ -272,8 +291,9 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
 
   void _navigateToWallet() {
     HapticFeedback.lightImpact();
-    final id =
-        widget.user['provider_profile_id'] ?? widget.user['id'] ?? '';
+    final id = _providerProfileId.isNotEmpty
+        ? _providerProfileId
+        : (widget.user['provider_profile_id'] ?? widget.user['id'] ?? '');
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -283,8 +303,9 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
 
   void _navigateToRatings() {
     HapticFeedback.lightImpact();
-    final id =
-        widget.user['provider_profile_id'] ?? widget.user['id'] ?? '';
+    final id = _providerProfileId.isNotEmpty
+        ? _providerProfileId
+        : (widget.user['provider_profile_id'] ?? widget.user['id'] ?? '');
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -478,13 +499,6 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
                   ),
                 );
                 break;
-              case 'language':
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Language switching coming soon!'),
-                  ),
-                );
-                break;
               case 'help':
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -499,8 +513,6 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
           itemBuilder: (_) => [
             _popupItem(Icons.person_outline_rounded,
                 AppStrings.menuProfile, 'profile'),
-            _popupItem(Icons.language_rounded,
-                AppStrings.menuLanguage, 'language'),
             _popupItem(Icons.help_outline_rounded,
                 AppStrings.menuHelp, 'help'),
             const PopupMenuDivider(),

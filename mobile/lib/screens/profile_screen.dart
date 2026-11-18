@@ -13,8 +13,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   List<dynamic> _addresses = [];
-  String _selectedLanguage = 'en'; // 'en', 'hi', 'mr'
-  bool _isLoading = true;
 
   static const Color primaryColor = Color(0xFF1F3864);
   static const Color accentColor = Color(0xFF548235);
@@ -31,11 +29,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         setState(() {
           _addresses = list;
-          _isLoading = false;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -163,52 +159,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       role.toUpperCase(),
                       style: const TextStyle(color: Color(0xFF15803D), fontSize: 10, fontWeight: FontWeight.bold),
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Multilingual Support Selector
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Preferred Language / भाषा / भाषा निवडा', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Text('English'),
-                          selected: _selectedLanguage == 'en',
-                          onSelected: (_) => setState(() => _selectedLanguage = 'en'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Text('हिंदी'),
-                          selected: _selectedLanguage == 'hi',
-                          onSelected: (_) => setState(() => _selectedLanguage = 'hi'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Text('मराठी'),
-                          selected: _selectedLanguage == 'mr',
-                          onSelected: (_) => setState(() => _selectedLanguage = 'mr'),
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),

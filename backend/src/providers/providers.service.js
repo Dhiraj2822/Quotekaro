@@ -8,7 +8,7 @@ async function getProviderProfileById(profileId) {
     `SELECT p.*, u.name as user_name, u.phone_number, u.city as user_city, u.profile_photo_url as user_photo
      FROM provider_profiles p
      JOIN users u ON u.id = p.user_id
-     WHERE p.id = $1`,
+     WHERE p.id = $1 OR p.user_id = $1`,
     [profileId]
   );
 
@@ -93,7 +93,7 @@ async function updateAvailability(profileId, isAvailable) {
   const res = await db.query(
     `UPDATE provider_profiles
      SET is_available = $1, updated_at = NOW()
-     WHERE id = $2
+     WHERE id = $2 OR user_id = $2
      RETURNING *`,
     [isAvailable, profileId]
   );
@@ -117,7 +117,7 @@ async function updateServiceArea(profileId, { categories, radius_km, lat, lng })
   const res = await db.query(
     `UPDATE provider_profiles
      SET categories = $1, service_area_radius_km = $2, base_location_lat = $3, base_location_lng = $4, updated_at = NOW()
-     WHERE id = $5
+     WHERE id = $5 OR user_id = $5
      RETURNING *`,
     [categories, radius_km, lat, lng, profileId]
   );

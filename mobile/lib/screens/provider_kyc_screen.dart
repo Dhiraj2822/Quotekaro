@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
 
 class ProviderKycScreen extends StatefulWidget {
@@ -21,9 +23,9 @@ class _ProviderKycScreenState extends State<ProviderKycScreen> {
   static const Color warningColor = Color(0xFFBF8F00);
 
   Map<String, dynamic>? _profile;
-  final TextEditingController _docUrlController = TextEditingController(
-    text: 'https://storage.quotekaro.com/kyc/aadhaar_proof.pdf',
-  );
+  String? _docUrl;
+  XFile? _pickedFile;
+  String? _selectedDocName;
 
   final List<String> _availableCategories = ['plumbing', 'electrical', 'painting', 'cleaning'];
   final Set<String> _selectedCategories = {'plumbing', 'electrical'};
@@ -50,23 +52,54 @@ class _ProviderKycScreenState extends State<ProviderKycScreen> {
         }
       }
       if (_profile!['kyc_document_url'] != null) {
-        _docUrlController.text = _profile!['kyc_document_url'];
+        _docUrl = _profile!['kyc_document_url'];
+        _selectedDocName = 'Aadhaar / ID Proof (Attached)';
       }
     }
   }
 
+  Future<void> _pickDocument(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 85,
+      );
+      if (picked != null) {
+        setState(() {
+          _pickedFile = picked;
+          _selectedDocName = picked.name;
+        });
+      }
+    } catch (e) {
+      _showMessage('Failed to capture document: $e', isError: true);
+    }
+  }
+
   Future<void> _submitKycDocument() async {
-    final url = _docUrlController.text.trim();
-    if (url.isEmpty || !url.startsWith('http')) {
-      _showMessage('Please enter a valid document URL', isError: true);
+    if (_pickedFile == null && (_docUrl == null || _docUrl!.isEmpty)) {
+      _showMessage('Please select an ID document to upload', isError: true);
       return;
     }
 
     setState(() => _isLoading = true);
     try {
-      final updated = await ApiService.submitKyc(url);
+      String documentUrl = _docUrl ?? '';
+      if (_pickedFile != null) {
+        final bytes = await _pickedFile!.readAsBytes();
+        final base64Str = base64Encode(bytes);
+        documentUrl = await ApiService.uploadPhoto(
+          base64Data: base64Str,
+          filename: _pickedFile!.name,
+        );
+      }
+
+      final updated = await ApiService.submitKyc(documentUrl);
       setState(() {
         _profile = updated;
+        _docUrl = documentUrl;
         _isAvailable = false;
         _isLoading = false;
       });
@@ -288,28 +321,117 @@ class _ProviderKycScreenState extends State<ProviderKycScreen> {
                     'Upload your government ID (Aadhaar, Voter ID, or Trade License) for admin verification.',
                     style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    key: const Key('doc_url_input'),
-                    controller: _docUrlController,
-                    decoration: InputDecoration(
-                      labelText: 'Document URL (Secure S3 / Storage)',
-                      prefixIcon: const Icon(Icons.link, size: 20),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  const SizedBox(height: 14),
+
+                  if (_selectedDocName != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF86EFAC)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle, color: accentColor, size: 24),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _selectedDocName!,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF166534)),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'Document ready for admin verification',
+                                  style: TextStyle(fontSize: 11, color: Color(0xFF15803D)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _isLoading ? null : () => _pickDocument(ImageSource.gallery),
+                            child: const Text('Change', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    key: const Key('submit_kyc_button'),
-                    onPressed: _isLoading ? null : _submitKycDocument,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    const SizedBox(height: 12),
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFCBD5E1), style: BorderStyle.solid),
+                      ),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.badge_outlined, size: 40, color: primaryColor),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Attach clear photo of your ID',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: primaryColor),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Supported formats: JPG, PNG, PDF',
+                            style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed: _isLoading ? null : () => _pickDocument(ImageSource.camera),
+                                icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                                label: const Text('Camera'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: primaryColor,
+                                  side: const BorderSide(color: primaryColor),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              ElevatedButton.icon(
+                                onPressed: _isLoading ? null : () => _pickDocument(ImageSource.gallery),
+                                icon: const Icon(Icons.photo_library_outlined, size: 18),
+                                label: const Text('Upload File'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryColor,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    icon: const Icon(Icons.cloud_upload_outlined, size: 18),
-                    label: const Text('Submit Document for Verification'),
+                    const SizedBox(height: 14),
+                  ],
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      key: const Key('submit_kyc_button'),
+                      onPressed: _isLoading ? null : _submitKycDocument,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      icon: const Icon(Icons.cloud_upload_outlined, size: 18),
+                      label: Text(
+                        _isLoading ? 'Submitting…' : 'Submit Document for Verification',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ),
                 ],
               ),

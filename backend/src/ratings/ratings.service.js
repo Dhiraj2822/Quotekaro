@@ -187,12 +187,12 @@ async function getRatingByBookingId({ bookingId, user }) {
  * Get provider ratings summary and reviews list (for Provider Ratings Dashboard).
  */
 async function getProviderRatings({ providerId, limit = 20, offset = 0 }) {
-  // Verify provider exists
+  // Verify provider exists (accepts profile UUID or user UUID)
   const profileRes = await db.query(
     `SELECT pp.id, pp.avg_rating_honesty, pp.avg_rating_punctuality, pp.avg_rating_quality, u.name
      FROM provider_profiles pp
      JOIN users u ON pp.user_id = u.id
-     WHERE pp.id = $1`,
+     WHERE pp.id = $1 OR pp.user_id = $1`,
     [providerId]
   );
 

@@ -24,7 +24,17 @@ class _ProviderJobFeedScreenState extends State<ProviderJobFeedScreen> {
   String _selectedCategory = 'all';
   int _selectedRadiusKm = 20;
 
-  final List<String> _categories = ['all', 'plumbing', 'electrical', 'painting', 'cleaning'];
+  List<String> get _categories {
+    if (widget.providerCategories != null && widget.providerCategories!.isNotEmpty) {
+      final cats = widget.providerCategories!.map((e) => e.toLowerCase()).toList();
+      if (cats.length > 1) {
+        return ['all', ...cats];
+      }
+      return cats;
+    }
+    return ['all', 'plumbing', 'electrical', 'painting', 'cleaning'];
+  }
+
   final List<int> _radiusOptions = [10, 20, 35, 50];
 
   // Default demo jobs for local testing / offline state
@@ -97,6 +107,9 @@ class _ProviderJobFeedScreenState extends State<ProviderJobFeedScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.providerCategories != null && widget.providerCategories!.isNotEmpty) {
+      _selectedCategory = widget.providerCategories!.first.toLowerCase();
+    }
     _fetchJobs();
   }
 

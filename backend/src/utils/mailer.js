@@ -5,8 +5,12 @@ let transporter = null;
 function getTransporter() {
   if (transporter) return transporter;
 
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const rawUser = process.env.SMTP_USER || '';
+  const rawPass = process.env.SMTP_PASS || '';
+
+  // Clean quotes and spaces from credentials
+  const user = rawUser.trim().replace(/^["']|["']$/g, '');
+  const pass = rawPass.trim().replace(/^["']|["']$/g, '').replace(/\s+/g, '');
 
   if (user && pass) {
     const isGmail = (process.env.SMTP_HOST || '').includes('gmail') || user.includes('@gmail.com');
@@ -14,9 +18,9 @@ function getTransporter() {
       transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: { user, pass },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 10000
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        socketTimeout: 15000
       });
     } else {
       transporter = nodemailer.createTransport({
@@ -24,9 +28,9 @@ function getTransporter() {
         port: parseInt(process.env.SMTP_PORT || '465', 10),
         secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
         auth: { user, pass },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 10000
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        socketTimeout: 15000
       });
     }
   }
@@ -102,8 +106,12 @@ async function sendOtpEmail(toEmail, otp) {
       return { success: false, error: err.message, fallbackOtp: otp };
     }
   } else {
+    // If SMTP is not configured
+    console.error('[MAILER ERROR] No SMTP credentials configured (SMTP_USER/SMTP_PASS missing).');
+    if (process.env.NODE_ENV === 'production') {
+      return { success: false, error: 'Email service is temporarily unconfigured on server' };
+    }
     // Development mode fallback when SMTP is not configured yet
-    console.log(`[EMAIL DEV LOG] (No SMTP credentials configured in .env)`);
     console.log(`[EMAIL DEV LOG] To: ${toEmail} | Verification Code: ${otp}`);
     return { success: true, simulated: true, otp };
   }

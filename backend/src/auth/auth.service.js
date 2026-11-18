@@ -291,7 +291,7 @@ async function requestEmailOtp(rawEmail) {
   // Send via mailer — throw if delivery fails so client knows to retry
   const mailResult = await sendOtpEmail(email, otp);
   if (!mailResult.success && !mailResult.simulated) {
-    // Don't burn the OTP — client can retry; remove rate-limit entry for this attempt
+    emailOtpStore.delete(email);
     const error = new Error('Failed to send verification email. Please try again in a moment.');
     error.statusCode = 503;
     error.code = 'EMAIL_DELIVERY_FAILED';

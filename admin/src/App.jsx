@@ -270,7 +270,7 @@ function App() {
         body: JSON.stringify({ phone_number: loginPhone })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Failed to send OTP');
+      if (!res.ok) throw new Error(data.error?.message || data.message || 'Failed to send OTP');
       setLoginStep('otp');
     } catch (err) {
       setLoginError(err.message || 'Backend unreachable. Use manual token below.');
@@ -286,16 +286,18 @@ function App() {
       const res = await fetch(`${API_BASE_URL}/auth/otp/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone_number: loginPhone, otp: loginOtp })
+        body: JSON.stringify({ phone_number: loginPhone, otp: loginOtp, role: 'admin' })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'OTP verification failed');
-      if (data.token) {
-        localStorage.setItem('qk_admin_token', data.token);
-        setAdminToken(data.token);
-      } else {
-        throw new Error('No token received from server');
+      if (!res.ok) throw new Error(data.error?.message || data.message || 'OTP verification failed');
+      // Backend returns access_token; fall back to data.token for older builds
+      const token = data.access_token || data.token;
+      if (!token) throw new Error('No token received from server');
+      if (data.user && data.user.role !== 'admin') {
+        throw new Error('This account does not have admin access.');
       }
+      localStorage.setItem('qk_admin_token', token);
+      setAdminToken(token);
     } catch (err) {
       setLoginError(err.message);
     } finally {

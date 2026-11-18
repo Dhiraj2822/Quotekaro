@@ -10,6 +10,38 @@ router.post('/otp/request', validate(requestOtpSchema), handleRequestOtp);
 router.post('/otp/verify', validate(verifyOtpSchema), handleVerifyOtp);
 router.get('/me', authenticate, handleGetMe);
 
+// 100% Free Email OTP Authentication Flow
+router.post('/email/otp/request', async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const result = await authService.requestEmailOtp(email);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/email/otp/verify', async (req, res, next) => {
+  try {
+    const { email, otp, role } = req.body;
+    const result = await authService.verifyEmailOtp(email, otp, role);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Production Mobile Number Verification & Profile Linking
+router.post('/profile/link-phone', authenticate, async (req, res, next) => {
+  try {
+    const { phone_number } = req.body;
+    const result = await authService.linkPhoneNumber(req.user.id, phone_number);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Email registration & login
 router.post('/email/register', async (req, res, next) => {
   try {

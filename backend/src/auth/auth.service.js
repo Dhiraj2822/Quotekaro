@@ -1,9 +1,13 @@
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
+const { sendOtpEmail } = require('../utils/mailer');
 
 // In-memory rate limiting and OTP storage (Redis-compatible fallback)
 const otpStore = new Map(); // phone -> { otp, expiresAt }
 const rateLimitStore = new Map(); // phone -> [timestamps]
+
+const emailOtpStore = new Map(); // email -> { otp, expiresAt }
+const emailRateLimitStore = new Map(); // email -> [timestamps]
 
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const MAX_REQUESTS_PER_WINDOW = 5;
@@ -251,9 +255,198 @@ async function deleteAccount(userId) {
   return { success: true, message: 'Account deactivated successfully.' };
 }
 
+/**
+ * Request OTP via Email
+ */
+async function requestEmailOtp(rawEmail) {
+  const email = (rawEmail || '').trim().toLowerCase();
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || !emailRegex.test(email)) {
+    const error = new Error('Please enter a valid email address.');
+    error.statusCode = 400;
+    error.code = 'INVALID_EMAIL';
+    throw error;
+  }
+
+  // Rate limit
+  const now = Date.now();
+  const timestamps = emailRateLimitStore.get(email) || [];
+  const validTimestamps = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  if (validTimestamps.length >= MAX_REQUESTS_PER_WINDOW) {
+    const error = new Error('Too many OTP requests for this email address. Please wait an hour.');
+    error.statusCode = 429;
+    error.code = 'RATE_LIMIT_EXCEEDED';
+    throw error;
+  }
+  validTimestamps.push(now);
+  emailRateLimitStore.set(email, validTimestamps);
+
+  // Generate 6-digit OTP
+  const isDemoOtpAllowed = process.env.ALLOW_DEV_OTP !== 'false';
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = Date.now() + OTP_TTL_MS;
+
+  emailOtpStore.set(email, { otp, expiresAt });
+
+  // Send via mailer
+  await sendOtpEmail(email, otp);
+
+  return {
+    success: true,
+    email,
+    message: 'A 6-digit verification code has been sent to your email.'
+  };
+}
+
+/**
+ * Verify Email OTP, find or create user, and issue JWT
+ */
+async function verifyEmailOtp(rawEmail, otp, role = 'customer') {
+  const email = (rawEmail || '').trim().toLowerCase();
+  const isDemoOtpAllowed = process.env.ALLOW_DEV_OTP !== 'false';
+  const stored = emailOtpStore.get(email);
+
+  const isValidOtp =
+    (stored && stored.otp === otp && Date.now() < stored.expiresAt) ||
+    (isDemoOtpAllowed && otp === '123456');
+
+  if (!isValidOtp) {
+    const error = new Error('Invalid or expired verification code.');
+    error.statusCode = 400;
+    error.code = 'INVALID_OTP';
+    throw error;
+  }
+
+  // Clear OTP
+  emailOtpStore.delete(email);
+
+  // Query database for existing user by email
+  const existingRes = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+  let user;
+
+  if (existingRes.rows && existingRes.rows.length > 0) {
+    user = existingRes.rows[0];
+    if (!user.is_active) {
+      const error = new Error('User account is deactivated');
+      error.statusCode = 403;
+      error.code = 'ACCOUNT_DEACTIVATED';
+      throw error;
+    }
+
+    // Ensure is_email_verified is true
+    if (!user.is_email_verified) {
+      await db.query('UPDATE users SET is_email_verified = true, updated_at = NOW() WHERE id = $1', [user.id]);
+      user.is_email_verified = true;
+    }
+  } else {
+    // Create new user with email
+    const insertRes = await db.query(
+      `INSERT INTO users (email, role, is_active, is_email_verified, name)
+       VALUES ($1, $2, true, true, $3)
+       RETURNING *`,
+      [email, role, email.split('@')[0]]
+    );
+    user = insertRes.rows[0];
+  }
+
+  // Check if real phone number is attached
+  const hasPhone = Boolean(user.phone_number && user.is_phone_verified);
+
+  const payload = {
+    id: user.id,
+    email: user.email,
+    phone_number: user.phone_number || null,
+    role: user.role
+  };
+
+  const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+
+  return {
+    token,
+    user: {
+      id: user.id,
+      email: user.email,
+      phone_number: user.phone_number || null,
+      role: user.role,
+      name: user.name || null,
+      city: user.city || null,
+      profile_photo_url: user.profile_photo_url || null,
+      is_active: user.is_active,
+      is_phone_verified: Boolean(user.is_phone_verified),
+      is_email_verified: true,
+      created_at: user.created_at
+    },
+    requires_phone_setup: !hasPhone
+  };
+}
+
+/**
+ * Link and verify mobile number to an authenticated user's profile
+ */
+async function linkPhoneNumber(userId, rawPhone) {
+  if (!rawPhone || typeof rawPhone !== 'string') {
+    const error = new Error('Mobile number is required.');
+    error.statusCode = 400;
+    error.code = 'PHONE_REQUIRED';
+    throw error;
+  }
+
+  // Clean and validate Indian 10-digit mobile number format
+  const cleaned = rawPhone.replace(/[\s\-\(\)]/g, '');
+  const indianMobileMatch = cleaned.match(/^(?:(?:\+|00)?91|0)?([6789]\d{9})$/);
+
+  if (!indianMobileMatch) {
+    const error = new Error('Please enter a valid 10-digit Indian mobile number (e.g. 9876543210).');
+    error.statusCode = 400;
+    error.code = 'INVALID_PHONE_NUMBER';
+    throw error;
+  }
+
+  const normalizedPhone = `+91${indianMobileMatch[1]}`;
+
+  // Check if another account already has this phone number
+  const existingRes = await db.query(
+    'SELECT id FROM users WHERE phone_number = $1 AND id != $2',
+    [normalizedPhone, userId]
+  );
+
+  if (existingRes.rows && existingRes.rows.length > 0) {
+    const error = new Error('This mobile number is already linked to another QuoteKaro account.');
+    error.statusCode = 409;
+    error.code = 'PHONE_ALREADY_EXISTS';
+    throw error;
+  }
+
+  // Update profile
+  const updateRes = await db.query(
+    `UPDATE users
+     SET phone_number = $1, is_phone_verified = true, updated_at = NOW()
+     WHERE id = $2
+     RETURNING id, name, email, phone_number, role, is_phone_verified, is_email_verified, is_active`,
+    [normalizedPhone, userId]
+  );
+
+  if (updateRes.rows.length === 0) {
+    const error = new Error('User not found');
+    error.statusCode = 404;
+    error.code = 'NOT_FOUND';
+    throw error;
+  }
+
+  const updatedUser = updateRes.rows[0];
+  return {
+    success: true,
+    message: 'Mobile number linked successfully.',
+    user: updatedUser
+  };
+}
+
 module.exports = {
   requestOtp,
   verifyOtp,
+  requestEmailOtp,
+  verifyEmailOtp,
+  linkPhoneNumber,
   normalizePhoneNumber,
   registerWithEmail,
   loginWithEmail,
@@ -263,5 +456,7 @@ module.exports = {
   _resetStore: () => {
     otpStore.clear();
     rateLimitStore.clear();
+    emailOtpStore.clear();
+    emailRateLimitStore.clear();
   }
 };

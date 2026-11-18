@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -23,6 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _otpSent = false;
   bool _isLoading = false;
   String? _errorMessage;
+  DateTime? _lastBackPressTime;
 
   static const Color primaryColor = Color(0xFF1F3864);
   static const Color accentColor = Color(0xFF548235);
@@ -103,7 +105,32 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final isCustomer = _selectedRole == 'customer';
 
-    return Center(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_otpSent) {
+          setState(() {
+            _otpSent = false;
+            _otpController.clear();
+            _errorMessage = null;
+          });
+          return;
+        }
+        final now = DateTime.now();
+        if (_lastBackPressTime == null || now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+          _lastBackPressTime = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Press back again to exit'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+        SystemNavigator.pop();
+      },
+      child: Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: ConstrainedBox(
@@ -329,6 +356,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }

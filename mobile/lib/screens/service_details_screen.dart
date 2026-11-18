@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'cart_checkout_screen.dart';
+import 'post_job_screen.dart';
 
 class ServiceDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> service;
@@ -113,6 +114,20 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.post_add, color: Colors.white, size: 16),
+            label: const Text('Post Job', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => PostJobScreen(
+                  initialCategory: srv['category_slug'] ?? 'plumbing',
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(

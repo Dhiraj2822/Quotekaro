@@ -264,7 +264,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
                   try {
                     final booking = await ApiService.autoMatchUrgentJob(job['id'].toString());
                     if (!context.mounted) return;
-                    Navigator.pushReplacement(
+                    Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => BookingConfirmationScreen(
@@ -276,7 +276,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
                   } catch (e) {
                     if (!context.mounted) return;
                     // Fallback to immediate confirmation view per 06_UIUX_SPEC.md §5
-                    Navigator.pushReplacement(
+                    Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => BookingConfirmationScreen(
@@ -312,7 +312,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
                 ),
                 onPressed: () {
                   Navigator.pop(ctx);
-                  Navigator.pushReplacement(
+                  Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => QuoteComparisonScreen(job: job)),
                   );

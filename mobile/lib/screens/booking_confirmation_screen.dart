@@ -57,7 +57,7 @@ class BookingConfirmationScreen extends StatelessWidget {
         title: Text(isCustomer ? 'Booking Confirmed' : 'Booking Assigned'),
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
-        automaticallyImplyLeading: false,
+        leading: const BackButton(color: Colors.white),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import 'provider_kyc_screen.dart';
 import 'post_job_screen.dart';
@@ -45,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _bookings = [];
   int _unreadNotifications = 0;
   String _selectedArea = 'Kothrud, Pune';
+  DateTime? _lastBackPressTime;
 
   final List<String> _puneAreas = [
     'Kothrud, Pune',
@@ -118,8 +120,29 @@ class _HomeScreenState extends State<HomeScreen> {
     final phone = widget.user['phone_number'] ?? '';
     final name = widget.user['name'] ?? 'Customer User';
 
-    return Scaffold(
-      appBar: AppBar(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_selectedNavIndex != 0) {
+          setState(() => _selectedNavIndex = 0);
+          return;
+        }
+        final now = DateTime.now();
+        if (_lastBackPressTime == null || now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+          _lastBackPressTime = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Press back again to exit'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+        SystemNavigator.pop();
+      },
+      child: Scaffold(
+        appBar: AppBar(
         title: Row(
           children: [
             Container(
@@ -130,15 +153,19 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: const Text('Q', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
             ),
-            const SizedBox(width: 10),
-            Text(
-              isCustomer ? 'QuoteKaro Customer' : 'QuoteKaro Partner',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                isCustomer ? 'QuoteKaro Customer' : 'QuoteKaro Partner',
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
             ),
           ],
         ),
         actions: [
-          if (isCustomer) ...[
+          if (isCustomer)
             IconButton(
               icon: Badge(
                 label: Text('$_unreadNotifications'),
@@ -152,33 +179,52 @@ class _HomeScreenState extends State<HomeScreen> {
                 MaterialPageRoute(builder: (_) => NotificationsScreen(user: widget.user)),
               ).then((_) => _loadData()),
             ),
-            IconButton(
-              icon: const Icon(Icons.smart_toy_outlined, color: Colors.white),
-              tooltip: 'QuoteKaro AI Assistant',
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => SupportChatbotScreen(user: widget.user)),
+          // Profile popup menu contains: Profile, AI Assistant, Refresh, Sign Out
+          PopupMenuButton<String>(
+            tooltip: 'More options',
+            offset: const Offset(0, 48),
+            icon: const Icon(Icons.account_circle_outlined, color: Colors.white),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            onSelected: (val) {
+              switch (val) {
+                case 'profile':
+                  Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => ProfileScreen(user: widget.user, onLogout: widget.onLogout),
+                  ));
+                  break;
+                case 'ai':
+                  Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => SupportChatbotScreen(user: widget.user),
+                  ));
+                  break;
+                case 'refresh':
+                  _loadData();
+                  break;
+                case 'logout':
+                  widget.onLogout();
+                  break;
+              }
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem<String>(
+                value: 'profile',
+                child: Row(children: [Icon(Icons.account_circle_outlined, size: 18), SizedBox(width: 10), Text('Profile & Addresses')]),
               ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.account_circle_outlined, color: Colors.white),
-              tooltip: 'Profile & Addresses',
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => ProfileScreen(user: widget.user, onLogout: widget.onLogout)),
+              if (isCustomer)
+                const PopupMenuItem<String>(
+                  value: 'ai',
+                  child: Row(children: [Icon(Icons.smart_toy_outlined, size: 18), SizedBox(width: 10), Text('AI Assistant')]),
+                ),
+              const PopupMenuItem<String>(
+                value: 'refresh',
+                child: Row(children: [Icon(Icons.refresh, size: 18), SizedBox(width: 10), Text('Refresh Data')]),
               ),
-            ),
-          ],
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            tooltip: 'Refresh Data',
-            onPressed: _loadData,
-          ),
-          IconButton(
-            key: const Key('logout_button'),
-            icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Sign Out',
-            onPressed: widget.onLogout,
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'logout',
+                child: Row(children: [Icon(Icons.logout, size: 18, color: Colors.red), SizedBox(width: 10), Text('Sign Out', style: TextStyle(color: Colors.red))]),
+              ),
+            ],
           ),
         ],
       ),
@@ -188,6 +234,8 @@ class _HomeScreenState extends State<HomeScreen> {
               onDestinationSelected: (idx) => setState(() => _selectedNavIndex = idx),
               backgroundColor: Colors.white,
               elevation: 3,
+              indicatorColor: HomeScreen.primaryColor.withValues(alpha: 0.15),
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
               destinations: [
                 const NavigationDestination(
                   icon: Icon(Icons.home_repair_service_outlined),
@@ -271,10 +319,11 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildProviderOperations(),
             ],
 
-            const SizedBox(height: 48),
+            const SizedBox(height: 96), // extra clearance so FAB never covers last card
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -309,10 +358,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(
                     name,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: HomeScreen.primaryColor),
+                        color: Theme.of(context).colorScheme.onSurface),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -641,7 +690,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const Text(
               'Select Service Category',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: HomeScreen.primaryColor),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             TextButton(
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PostJobScreen(onJobCreated: _loadData))),
@@ -651,141 +700,36 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 8),
 
-        GridView.count(
-          crossAxisCount: 2,
+        // Category grid: mainAxisExtent gives each cell a fixed height
+        // so content never overflows regardless of font scale or screen width.
+        GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.35,
-          children: [
-            _buildCategoryCard(
-              title: 'Plumbing',
-              subtitle: 'Taps, pipes, leakages',
-              icon: Icons.plumbing,
-              color: const Color(0xFF0284C7),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ServiceDetailsScreen(
-                    service: {
-                      'id': 's-plumb-1',
-                      'name': 'Tap Repair & Mixer Leakage',
-                      'slug': 'tap-repair',
-                      'category_slug': 'plumbing',
-                      'base_price_paise': 19900,
-                      'description': 'Fix dripping taps, replace faulty spindle/cartridges, and resolve water mixer leaks.',
-                    },
-                  ),
-                ),
-              ),
-            ),
-            _buildCategoryCard(
-              title: 'Electrician',
-              subtitle: 'Wiring, MCBs, fixtures',
-              icon: Icons.electrical_services,
-              color: const Color(0xFFEA580C),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ServiceDetailsScreen(
-                    service: {
-                      'id': 's-elec-1',
-                      'name': 'Ceiling Fan Installation & Repair',
-                      'slug': 'fan-repair',
-                      'category_slug': 'electrician',
-                      'base_price_paise': 19900,
-                      'description': 'Ceiling fan mounting, capacitor replacement, regulator testing, and wobble correction.',
-                    },
-                  ),
-                ),
-              ),
-            ),
-            _buildCategoryCard(
-              title: 'Cleaning',
-              subtitle: 'Deep home, sofa, sanitize',
-              icon: Icons.cleaning_services,
-              color: const Color(0xFF7C3AED),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ServiceDetailsScreen(
-                    service: {
-                      'id': 's-clean-1',
-                      'name': 'Full Home Deep Cleaning',
-                      'slug': 'full-home-deep-cleaning',
-                      'category_slug': 'cleaning',
-                      'base_price_paise': 249900,
-                      'description': 'Comprehensive top-to-bottom sanitization and deep cleaning of entire apartment or villa.',
-                    },
-                  ),
-                ),
-              ),
-            ),
-            _buildCategoryCard(
-              title: 'Appliance Repair',
-              subtitle: 'AC, RO, Fridge, Washing',
-              icon: Icons.home_repair_service,
-              color: const Color(0xFF059669),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ServiceDetailsScreen(
-                    service: {
-                      'id': 's-app-1',
-                      'name': 'AC Servicing & Gas Charging',
-                      'slug': 'ac-repair-servicing',
-                      'category_slug': 'appliance-repair',
-                      'base_price_paise': 59900,
-                      'description': 'High-pressure jet pump wash, indoor coil cleansing, gas leak diagnosis, and cooling optimization.',
-                    },
-                  ),
-                ),
-              ),
-            ),
-            _buildCategoryCard(
-              title: 'Carpentry',
-              subtitle: 'Doors, locks, furniture',
-              icon: Icons.carpenter,
-              color: const Color(0xFFD97706),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ServiceDetailsScreen(
-                    service: {
-                      'id': 's-carp-1',
-                      'name': 'Door Lock Installation & Repair',
-                      'slug': 'door-repair-lock-installation',
-                      'category_slug': 'carpentry',
-                      'base_price_paise': 29900,
-                      'description': 'Main door lock mortise, latch repair, Godrej lock installation, and door realignment.',
-                    },
-                  ),
-                ),
-              ),
-            ),
-            _buildCategoryCard(
-              title: 'Painting & Other',
-              subtitle: 'Pest control, wall paint',
-              icon: Icons.format_paint,
-              color: const Color(0xFF16A34A),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ServiceDetailsScreen(
-                    service: {
-                      'id': 's-oth-1',
-                      'name': 'Pest Control & Cockroach Gel',
-                      'slug': 'pest-control',
-                      'category_slug': 'other-services',
-                      'base_price_paise': 89900,
-                      'description': 'Odorless Bayer herbal gel treatment for German cockroaches, kitchen pests, and ants.',
-                    },
-                  ),
-                ),
-              ),
-            ),
-          ],
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            mainAxisExtent: 110, // fixed px height – no overflow
+          ),
+          itemCount: 6,
+          itemBuilder: (ctx, index) {
+            final cards = [
+              (title: 'Plumbing', subtitle: 'Taps, pipes, leakages', icon: Icons.plumbing, color: const Color(0xFF0284C7), id: 's-plumb-1', name: 'Tap Repair & Mixer Leakage', slug: 'tap-repair', catSlug: 'plumbing', price: 19900, desc: 'Fix dripping taps, replace faulty spindle/cartridges, and resolve water mixer leaks.'),
+              (title: 'Electrician', subtitle: 'Wiring, MCBs, fixtures', icon: Icons.electrical_services, color: const Color(0xFFEA580C), id: 's-elec-1', name: 'Ceiling Fan Installation & Repair', slug: 'fan-repair', catSlug: 'electrician', price: 19900, desc: 'Ceiling fan mounting, capacitor replacement, regulator testing, and wobble correction.'),
+              (title: 'Cleaning', subtitle: 'Deep home, sofa, sanitize', icon: Icons.cleaning_services, color: const Color(0xFF7C3AED), id: 's-clean-1', name: 'Full Home Deep Cleaning', slug: 'full-home-deep-cleaning', catSlug: 'cleaning', price: 249900, desc: 'Comprehensive top-to-bottom sanitization and deep cleaning of entire apartment or villa.'),
+              (title: 'Appliance Repair', subtitle: 'AC, RO, Fridge, Washing', icon: Icons.home_repair_service, color: const Color(0xFF059669), id: 's-app-1', name: 'AC Servicing & Gas Charging', slug: 'ac-repair-servicing', catSlug: 'appliance-repair', price: 59900, desc: 'High-pressure jet pump wash, indoor coil cleansing, gas leak diagnosis, and cooling optimization.'),
+              (title: 'Carpentry', subtitle: 'Doors, locks, furniture', icon: Icons.carpenter, color: const Color(0xFFD97706), id: 's-carp-1', name: 'Door Lock Installation & Repair', slug: 'door-repair-lock-installation', catSlug: 'carpentry', price: 29900, desc: 'Main door lock mortise, latch repair, Godrej lock installation, and door realignment.'),
+              (title: 'Painting & Other', subtitle: 'Pest control, wall paint', icon: Icons.format_paint, color: const Color(0xFF16A34A), id: 's-oth-1', name: 'Pest Control & Cockroach Gel', slug: 'pest-control', catSlug: 'other-services', price: 89900, desc: 'Odorless Bayer herbal gel treatment for German cockroaches, kitchen pests, and ants.'),
+            ];
+            final c = cards[index];
+            return _buildCategoryCard(
+              title: c.title,
+              subtitle: c.subtitle,
+              icon: c.icon,
+              color: c.color,
+              onTap: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => ServiceDetailsScreen(service: {'id': c.id, 'name': c.name, 'slug': c.slug, 'category_slug': c.catSlug, 'base_price_paise': c.price, 'description': c.desc}))),
+            );
+          },
         ),
 
         const SizedBox(height: 24),
@@ -793,7 +737,7 @@ class _HomeScreenState extends State<HomeScreen> {
         // 4.5 Popular Services Direct Booking Row
         const Text(
           'Popular Services in Pune',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: HomeScreen.primaryColor),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         const SizedBox(height: 10),
         SizedBox(
@@ -930,7 +874,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: HomeScreen.primaryColor),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -974,32 +918,46 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
+          // Reduced padding to fit in mainAxisExtent: 110 at font scale 1.3
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisSize: MainAxisSize.min, // shrink-wrap; no spaceBetween overflow
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   CircleAvatar(
                     backgroundColor: color.withValues(alpha: 0.12),
-                    radius: 18,
-                    child: Icon(icon, color: color, size: 20),
+                    radius: 16,
+                    child: Icon(icon, color: color, size: 18),
                   ),
-                  Icon(Icons.arrow_forward_ios, size: 12, color: const Color(0xFFCBD5E1)),
+                  Icon(Icons.arrow_forward_ios, size: 11, color: const Color(0xFFCBD5E1)),
                 ],
               ),
-              const SizedBox(height: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: HomeScreen.primaryColor)),
-                  const SizedBox(height: 2),
-                  Text(subtitle, style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 6),
-                  Text('Get Quotes →', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
-                ],
+              const SizedBox(height: 6),
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  // Use ColorScheme so it's readable in both light and dark mode
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Get Quotes →',
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color),
               ),
             ],
           ),
@@ -1395,7 +1353,7 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         const Text(
           'Jury Evaluation Accounts & Flows',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: HomeScreen.primaryColor),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         const SizedBox(height: 6),
         const Text(
@@ -1470,7 +1428,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               children: [
                 Expanded(
-                  child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: HomeScreen.primaryColor)),
+                  child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -1483,7 +1441,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 6),
-            Text('Account: $customerName ($phone)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+            Text('Account: $customerName ($phone)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
             Text(description, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
           ],

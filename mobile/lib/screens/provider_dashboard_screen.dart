@@ -59,6 +59,7 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
   String _kycStatus = 'pending'; // 'verified' | 'pending' | 'offline'
   List<Map<String, dynamic>> _recentActivity = [];
   String? _errorMessage;
+  DateTime? _lastBackPressTime;
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnim;
@@ -345,19 +346,41 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
     final name =
         rawName.isEmpty ? AppStrings.fallbackName : rawName;
 
-    return Scaffold(
-      backgroundColor: bg,
-      appBar: _buildAppBar(context, isDark, phone, name),
-      bottomNavigationBar: _buildBottomNav(context, isDark),
-      body: RefreshIndicator(
-        color: AppColors.primaryNavy,
-        onRefresh: _loadDashboard,
-        child: _isLoading
-            ? _buildShimmer(isDark)
-            : FadeTransition(
-                opacity: _fadeAnim,
-                child: _buildBody(context, isDark, name, phone),
-              ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_selectedNavIndex != 0) {
+          setState(() => _selectedNavIndex = 0);
+          return;
+        }
+        final now = DateTime.now();
+        if (_lastBackPressTime == null || now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+          _lastBackPressTime = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Press back again to exit'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+        SystemNavigator.pop();
+      },
+      child: Scaffold(
+        backgroundColor: bg,
+        appBar: _buildAppBar(context, isDark, phone, name),
+        bottomNavigationBar: _buildBottomNav(context, isDark),
+        body: RefreshIndicator(
+          color: AppColors.primaryNavy,
+          onRefresh: _loadDashboard,
+          child: _isLoading
+              ? _buildShimmer(isDark)
+              : FadeTransition(
+                  opacity: _fadeAnim,
+                  child: _buildBody(context, isDark, name, phone),
+                ),
+        ),
       ),
     );
   }
@@ -624,7 +647,7 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
           crossAxisCount: 2,
           mainAxisSpacing: AppSpacing.sm,
           crossAxisSpacing: AppSpacing.sm,
-          childAspectRatio: 1.1,
+          mainAxisExtent: 120, // matches live grid height
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           children: List.generate(
@@ -827,7 +850,7 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen>
         crossAxisCount: 2,
         mainAxisSpacing: AppSpacing.sm,
         crossAxisSpacing: AppSpacing.sm,
-        childAspectRatio: 1.15, // square-ish, consistent height
+        mainAxisExtent: 120, // fixed height: no overflow at font scale 1.3
       ),
       itemBuilder: (_, i) {
         final a = actions[i];
@@ -1217,7 +1240,7 @@ class ActionCard extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisSize: MainAxisSize.min, // shrink-wrap; prevent overflow
             children: [
               // Icon circle + optional badge
               Row(
@@ -1251,30 +1274,24 @@ class ActionCard extends StatelessWidget {
                     ),
                 ],
               ),
+              const SizedBox(height: 8),
               // Title + subtitle
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                      height: 1.2,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: AppTextStyles.caption
-                        .copyWith(fontSize: 11),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: AppTextStyles.caption.copyWith(fontSize: 11),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

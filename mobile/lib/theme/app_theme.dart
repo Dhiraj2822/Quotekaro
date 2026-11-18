@@ -124,10 +124,28 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.surface,
-        indicatorColor: AppColors.primaryNavy.withValues(alpha: 0.1),
-        labelTextStyle: WidgetStateProperty.all(
-          const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
-        ),
+        indicatorColor: AppColors.primaryNavy.withValues(alpha: 0.15),
+        // Selected label: primaryNavy; unselected: textSecondary
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primaryNavy,
+            );
+          }
+          return const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textSecondary,
+          );
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: AppColors.primaryNavy, size: 24);
+          }
+          return const IconThemeData(color: AppColors.textSecondary, size: 24);
+        }),
       ),
     );
   }

@@ -252,22 +252,26 @@ function App() {
   // Admin JWT Token — check localStorage on init, null = show login
   const [adminToken, setAdminToken] = useState(() => localStorage.getItem('qk_admin_token') || null);
 
-  // Login flow state
-  const [loginPhone, setLoginPhone] = useState('+919999900000');
+  // Login flow state — email OTP based
+  const [loginEmail, setLoginEmail] = useState('');
   const [loginOtp, setLoginOtp] = useState('');
-  const [loginStep, setLoginStep] = useState('phone'); // 'phone' | 'otp'
+  const [loginStep, setLoginStep] = useState('email'); // 'email' | 'otp'
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [manualToken, setManualToken] = useState('');
 
-  const handleSendOtp = async () => {
+  const handleSendEmailOtp = async () => {
+    if (!loginEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail.trim())) {
+      setLoginError('Please enter a valid email address.');
+      return;
+    }
     setLoginLoading(true);
     setLoginError('');
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/otp/request`, {
+      const res = await fetch(`${API_BASE_URL}/auth/email/otp/request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone_number: loginPhone })
+        body: JSON.stringify({ email: loginEmail.trim() })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error?.message || data.message || 'Failed to send OTP');
@@ -279,14 +283,14 @@ function App() {
     }
   };
 
-  const handleVerifyOtp = async () => {
+  const handleVerifyEmailOtp = async () => {
     setLoginLoading(true);
     setLoginError('');
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/otp/verify`, {
+      const res = await fetch(`${API_BASE_URL}/auth/email/otp/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone_number: loginPhone, otp: loginOtp, role: 'admin' })
+        body: JSON.stringify({ email: loginEmail.trim(), otp: loginOtp, role: 'admin' })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error?.message || data.message || 'OTP verification failed');
@@ -294,7 +298,7 @@ function App() {
       const token = data.access_token || data.token;
       if (!token) throw new Error('No token received from server');
       if (data.user && data.user.role !== 'admin') {
-        throw new Error('This account does not have admin access.');
+        throw new Error('This account does not have admin access. Please use an admin-registered email.');
       }
       localStorage.setItem('qk_admin_token', token);
       setAdminToken(token);
@@ -315,7 +319,8 @@ function App() {
   const handleAdminLogout = () => {
     localStorage.removeItem('qk_admin_token');
     setAdminToken(null);
-    setLoginStep('phone');
+    setLoginStep('email');
+    setLoginEmail('');
     setLoginOtp('');
     setLoginError('');
   };
@@ -553,16 +558,18 @@ function App() {
               </div>
             )}
 
-            {loginStep === 'phone' ? (
+            {loginStep === 'email' ? (
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-                  Admin Phone Number
+                  Admin Email Address
                 </label>
                 <input
-                  type="text"
-                  value={loginPhone}
-                  onChange={(e) => setLoginPhone(e.target.value)}
-                  placeholder="+919999900000"
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendEmailOtp()}
+                  placeholder="admin@quotekaro.com"
+                  autoComplete="email"
                   style={{
                     width: '100%', padding: '12px 14px', borderRadius: '8px',
                     border: '1px solid #D1D5DB', fontSize: '15px', marginBottom: '6px',
@@ -570,11 +577,11 @@ function App() {
                   }}
                 />
                 <p style={{ fontSize: '11px', color: '#9CA3AF', margin: '0 0 16px' }}>
-                  Demo: +919999900000 · OTP: 123456
+                  A one-time code will be sent to your inbox
                 </p>
                 <button
-                  onClick={handleSendOtp}
-                  disabled={loginLoading || !loginPhone.trim()}
+                  onClick={handleSendEmailOtp}
+                  disabled={loginLoading || !loginEmail.trim()}
                   style={{
                     width: '100%', padding: '12px', borderRadius: '8px',
                     backgroundColor: '#1F3864', color: '#FFFFFF', fontWeight: 600,
@@ -591,14 +598,16 @@ function App() {
                   Enter 6-Digit OTP
                 </label>
                 <p style={{ fontSize: '12px', color: '#6B7280', margin: '0 0 8px' }}>
-                  Sent to {loginPhone}
+                  Sent to {loginEmail}
                 </p>
                 <input
                   type="text"
                   value={loginOtp}
                   onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onKeyDown={(e) => e.key === 'Enter' && loginOtp.length === 6 && handleVerifyEmailOtp()}
                   placeholder="123456"
                   maxLength={6}
+                  autoComplete="one-time-code"
                   style={{
                     width: '100%', padding: '14px', borderRadius: '8px',
                     border: '1px solid #D1D5DB', fontSize: '24px', letterSpacing: '8px',
@@ -607,7 +616,7 @@ function App() {
                   }}
                 />
                 <button
-                  onClick={handleVerifyOtp}
+                  onClick={handleVerifyEmailOtp}
                   disabled={loginLoading || loginOtp.length !== 6}
                   style={{
                     width: '100%', padding: '12px', borderRadius: '8px',
@@ -619,14 +628,14 @@ function App() {
                   {loginLoading ? 'Verifying...' : 'Verify OTP & Login ✓'}
                 </button>
                 <button
-                  onClick={() => { setLoginStep('phone'); setLoginOtp(''); setLoginError(''); }}
+                  onClick={() => { setLoginStep('email'); setLoginOtp(''); setLoginError(''); }}
                   style={{
                     width: '100%', padding: '10px', borderRadius: '8px',
                     backgroundColor: 'transparent', color: '#6B7280', fontWeight: 500,
                     fontSize: '13px', border: '1px solid #E5E7EB', cursor: 'pointer'
                   }}
                 >
-                  ← Change Phone Number
+                  ← Change Email
                 </button>
               </div>
             )}

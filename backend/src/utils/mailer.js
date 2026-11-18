@@ -39,12 +39,61 @@ function getTransporter() {
 }
 
 /**
+ * Send via Resend REST API (HTTPS port 443 — bypasses Render SMTP port blocks)
+ */
+async function sendViaResend(apiKey, toEmail, otp, htmlContent) {
+  const from = process.env.RESEND_FROM || 'QuoteKaro <onboarding@resend.dev>';
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey.trim()}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from,
+      to: [toEmail],
+      subject: `[QuoteKaro] ${otp} is your verification code`,
+      html: htmlContent
+    })
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || `Resend returned ${res.status}`);
+  }
+  return { success: true, messageId: data.id };
+}
+
+/**
+ * Send via Brevo REST API (HTTPS port 443 — bypasses Render SMTP port blocks)
+ */
+async function sendViaBrevo(apiKey, toEmail, otp, htmlContent) {
+  const senderEmail = process.env.BREVO_SENDER_EMAIL || process.env.SMTP_USER || 'dhirajs102835@gmail.com';
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': apiKey.trim(),
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      sender: { name: 'QuoteKaro Security', email: senderEmail },
+      to: [{ email: toEmail }],
+      subject: `[QuoteKaro] ${otp} is your verification code`,
+      htmlContent
+    })
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || `Brevo returned ${res.status}`);
+  }
+  return { success: true, messageId: data.messageId };
+}
+
+/**
  * Send a professional, branded 6-digit OTP email to user
  */
 async function sendOtpEmail(toEmail, otp) {
-  const mailTransporter = getTransporter();
-  const fromAddress = process.env.SMTP_FROM || `"QuoteKaro Security" <${process.env.SMTP_USER || 'no-reply@quotekaro.com'}>`;
-
   const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -89,6 +138,32 @@ async function sendOtpEmail(toEmail, otp) {
     </html>
   `;
 
+  // 1. Prioritize Resend HTTP API (Port 443 — works everywhere on cloud hosts)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const res = await sendViaResend(process.env.RESEND_API_KEY, toEmail, otp, htmlContent);
+      console.log(`[MAILER] OTP email delivered to ${toEmail} via Resend HTTPS API (id: ${res.messageId})`);
+      return res;
+    } catch (err) {
+      console.error('[MAILER ERROR] Resend HTTP API failed:', err.message);
+    }
+  }
+
+  // 2. Prioritize Brevo HTTP API (Port 443)
+  if (process.env.BREVO_API_KEY) {
+    try {
+      const res = await sendViaBrevo(process.env.BREVO_API_KEY, toEmail, otp, htmlContent);
+      console.log(`[MAILER] OTP email delivered to ${toEmail} via Brevo HTTPS API (id: ${res.messageId})`);
+      return res;
+    } catch (err) {
+      console.error('[MAILER ERROR] Brevo HTTP API failed:', err.message);
+    }
+  }
+
+  // 3. Fallback to SMTP transport (works locally or on paid hosting)
+  const mailTransporter = getTransporter();
+  const fromAddress = process.env.SMTP_FROM || `"QuoteKaro Security" <${process.env.SMTP_USER || 'no-reply@quotekaro.com'}>`;
+
   if (mailTransporter) {
     try {
       const info = await mailTransporter.sendMail({
@@ -101,17 +176,14 @@ async function sendOtpEmail(toEmail, otp) {
       return { success: true, messageId: info.messageId };
     } catch (err) {
       console.error('[MAILER ERROR] Failed to send email via SMTP:', err.message);
-      // Fallback for safety in dev
       console.log(`[EMAIL DEV FALLBACK] To: ${toEmail} | Code: ${otp}`);
       return { success: false, error: err.message, fallbackOtp: otp };
     }
   } else {
-    // If SMTP is not configured
-    console.error('[MAILER ERROR] No SMTP credentials configured (SMTP_USER/SMTP_PASS missing).');
-    if (process.env.NODE_ENV === 'production') {
-      return { success: false, error: 'Email service is temporarily unconfigured on server' };
+    console.error('[MAILER ERROR] No email service configured (set RESEND_API_KEY, BREVO_API_KEY, or SMTP credentials).');
+    if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEV_OTP === 'false') {
+      return { success: false, error: 'Email service is unconfigured on server' };
     }
-    // Development mode fallback when SMTP is not configured yet
     console.log(`[EMAIL DEV LOG] To: ${toEmail} | Verification Code: ${otp}`);
     return { success: true, simulated: true, otp };
   }

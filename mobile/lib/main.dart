@@ -47,11 +47,10 @@ class _QuoteKaroAppState extends State<QuoteKaroApp> {
       title: 'QuoteKaro',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.light,
       builder: (context, child) {
         return Container(
-          color: const Color(0xFF0F172A),
+          color: const Color(0xFFF1F5F9),
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 480),

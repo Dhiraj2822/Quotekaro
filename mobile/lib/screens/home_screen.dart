@@ -280,25 +280,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             )
           : null,
-      floatingActionButton: isCustomer
-          ? FloatingActionButton.extended(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => PostJobScreen(onJobCreated: _loadData)),
-              ),
-              backgroundColor: HomeScreen.primaryColor,
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text('Post a Job', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            )
-          : FloatingActionButton.extended(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProviderJobFeedScreen()),
-              ),
-              backgroundColor: HomeScreen.accentColor,
-              icon: const Icon(Icons.flash_on, color: Colors.white),
-              label: const Text('Live Job Feed', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
       body: RefreshIndicator(
         onRefresh: _loadData,
         child: ListView(
@@ -319,7 +300,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildProviderOperations(),
             ],
 
-            const SizedBox(height: 96), // extra clearance so FAB never covers last card
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -801,6 +782,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 6),
                 _buildValuePropRow(Icons.account_balance_wallet_outlined, '10% Commission Escrow', 'Platform commission auto-deducted on cash and digital.'),
               ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: HomeScreen.primaryColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.add_circle_outline, color: Colors.white),
+            label: const Text('Post a Custom Job', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => PostJobScreen(onJobCreated: _loadData)),
             ),
           ),
         ),

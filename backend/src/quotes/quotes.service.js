@@ -376,7 +376,11 @@ async function acceptQuote({ jobId, quoteId, user, paymentMethod = 'cash' }) {
 
     const booking = bookingRes.rows[0];
 
-    // Create payment record (cash is pending until work completion; digital is completed)
+    // Create payment record — always 'pending' regardless of method.
+    // The method here is just a PREFERENCE stored at quote acceptance.
+    // For cash: provider collects physically, platform deducts commission at job completion.
+    // For UPI/card: customer must initiate actual payment via PaymentScreen AFTER job completion;
+    //   creditPayout is only triggered in payments.service.js verifyAndCompletePayment().
     const pricePaise = parseInt(quote.price_paise, 10);
     const validMethod = ['upi', 'card', 'cash'].includes(paymentMethod) ? paymentMethod : 'cash';
     try {
@@ -384,7 +388,7 @@ async function acceptQuote({ jobId, quoteId, user, paymentMethod = 'cash' }) {
         `INSERT INTO payments (booking_id, amount_paise, method, status)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (booking_id) DO UPDATE SET method = EXCLUDED.method, status = EXCLUDED.status`,
-        [booking.id, pricePaise, validMethod, validMethod === 'cash' ? 'pending' : 'completed']
+        [booking.id, pricePaise, validMethod, 'pending']  // Always pending — customer pays later via PaymentScreen after job completion
       );
     } catch (payErr) {
       if (!payErr.message || !payErr.message.includes('payments')) {

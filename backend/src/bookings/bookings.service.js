@@ -763,6 +763,9 @@ async function completeBooking({ bookingId, afterPhotoUrl = null, beforePhotoUrl
   );
 
   // 5. Update payment record
+  // For cash: mark completed immediately (provider already collected cash physically).
+  // For online (UPI/card): keep as pending — customer must initiate payment via PaymentScreen
+  //   AFTER job completion. Provider payout only happens in payments.service.verifyAndCompletePayment().
   const paymentRes = await db.query(
     'SELECT * FROM payments WHERE booking_id = $1',
     [bookingId]
@@ -771,14 +774,15 @@ async function completeBooking({ bookingId, afterPhotoUrl = null, beforePhotoUrl
   if (paymentRes.rowCount > 0) {
     const payment = paymentRes.rows[0];
     paymentMethod = payment.method || 'cash';
-    if (payment.status === 'pending') {
+    // Only auto-complete CASH payments here — online stays pending until customer pays
+    if (paymentMethod === 'cash' && payment.status === 'pending') {
       await db.query(
         `UPDATE payments SET status = 'completed', updated_at = NOW() WHERE id = $1`,
         [payment.id]
       );
     }
   } else {
-    // If no payment record existed, create completed cash payment record
+    // No payment record → treat as cash, create completed cash record
     const pricePaise = parseInt(booking.price_paise, 10);
     await db.query(
       `INSERT INTO payments (booking_id, amount_paise, method, gateway_txn_id, status)
@@ -787,24 +791,18 @@ async function completeBooking({ bookingId, afterPhotoUrl = null, beforePhotoUrl
     );
   }
 
-  // 6. Wallet Settlement Logic:
-  // - ONLINE PAYMENT (UPI, card): Customer paid platform. Platform keeps 10% commission, CREDITS 90% payout to provider wallet!
-  // - CASH PAYMENT: Customer paid provider in physical cash. Platform DEDUCTS 10% commission from provider's prepaid wallet balance.
+  // 6. Wallet Settlement Logic (BOTH cash and online):
+  // - CASH: Provider collected full amount in cash → platform deducts 10% commission from provider's prepaid wallet.
+  // - ONLINE (UPI/card): Platform will collect payment from customer. We STILL deduct 10% commission
+  //   from provider wallet now (same as cash). When customer pays via PaymentScreen,
+  //   verifyAndCompletePayment() credits 90% payout to provider wallet.
   const pricePaise = parseInt(booking.price_paise, 10);
   let walletResult;
-  if (paymentMethod === 'cash') {
-    walletResult = await deductCommission({
-      providerId: booking.provider_id,
-      bookingId: booking.id,
-      bookingPricePaise: pricePaise
-    });
-  } else {
-    walletResult = await creditPayout({
-      providerId: booking.provider_id,
-      bookingId: booking.id,
-      bookingPricePaise: pricePaise
-    });
-  }
+  walletResult = await deductCommission({
+    providerId: booking.provider_id,
+    bookingId: booking.id,
+    bookingPricePaise: pricePaise
+  });
 
   // Restore provider availability after job completion if wallet still sufficient
   if (!walletResult.belowThreshold) {
@@ -816,6 +814,28 @@ async function completeBooking({ bookingId, afterPhotoUrl = null, beforePhotoUrl
 
   // 7. Clear live location cache
   liveLocationCache.delete(bookingId);
+
+  // 7b. Notify customer that work is done and payment is needed (for online payments)
+  try {
+    const { notificationsService } = require('../notifications');
+    if (paymentMethod !== 'cash') {
+      // Online payment: customer must now pay
+      notificationsService.createNotification(booking.customer_id, {
+        title: '✅ Work Completed — Payment Required',
+        body: `Your service provider has completed the job. Please open the app to make your payment.`,
+        type: 'payment_required',
+        metadata: { booking_id: bookingId }
+      }).catch(() => {});
+    } else {
+      // Cash: just notify completion
+      notificationsService.createNotification(booking.customer_id, {
+        title: '✅ Job Completed',
+        body: `Your service booking has been marked complete. Please rate your experience.`,
+        type: 'booking_completed',
+        metadata: { booking_id: bookingId }
+      }).catch(() => {});
+    }
+  } catch (_) {}
 
 
   // 8. Return formatted updated booking with wallet deduction info

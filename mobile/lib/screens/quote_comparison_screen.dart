@@ -251,6 +251,7 @@ class _QuoteComparisonScreenState extends State<QuoteComparisonScreen> {
       enrichedBooking['provider'] ??= quote['provider'] ?? quote;
       enrichedBooking['price_paise'] ??= quote['price_paise'];
       enrichedBooking['eta_minutes'] ??= quote['eta_minutes'];
+      enrichedBooking['payment_method'] = selectedMethod; // Store selected payment method
 
       Navigator.push(
         context,

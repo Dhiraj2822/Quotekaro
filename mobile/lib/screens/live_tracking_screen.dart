@@ -70,7 +70,10 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
 
   Future<void> _fetchTrackingData() async {
     final bookingId = widget.booking['id']?.toString() ?? '';
-    if (bookingId.isEmpty) return;
+    if (bookingId.isEmpty) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
 
     try {
       final track = await ApiService.getBookingTrack(bookingId);
@@ -85,11 +88,19 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
         if (track['status'] != null) _status = track['status'].toString().toLowerCase();
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
+      // Surface the error so the user knows what happened
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not load tracking data: ${e.toString().replaceAll('Exception: ', '')}'),
+          backgroundColor: Colors.orange[700],
+          duration: const Duration(seconds: 4),
+        ),
+      );
     }
   }
 

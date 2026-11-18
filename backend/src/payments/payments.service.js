@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const razorpayService = require('./razorpay.service');
+const { creditPayout } = require('../wallet/wallet.service');
 
 /**
  * Payments Service
@@ -190,12 +191,30 @@ async function processWebhook({ rawBody, signature, event }) {
     const res = await db.query(findQuery, params);
     if (res.rowCount > 0) {
       const payment = res.rows[0];
-      await db.query(
-        `UPDATE payments 
-         SET status = 'completed', gateway_txn_id = COALESCE($1, gateway_txn_id), updated_at = NOW() 
-         WHERE id = $2`,
-        [txnId || orderId, payment.id]
-      );
+      // Guard: only process once
+      if (payment.status !== 'completed') {
+        await db.query(
+          `UPDATE payments 
+           SET status = 'completed', gateway_txn_id = COALESCE($1, gateway_txn_id), updated_at = NOW() 
+           WHERE id = $2`,
+          [txnId || orderId, payment.id]
+        );
+
+        // Credit provider payout via webhook (server-side confirmation path)
+        const bkId = payment.booking_id;
+        const bookingDataRes = await db.query(
+          `SELECT b.provider_id, q.price_paise FROM bookings b JOIN quotes q ON b.quote_id = q.id WHERE b.id = $1`,
+          [bkId]
+        );
+        if (bookingDataRes.rowCount > 0) {
+          const { provider_id, price_paise } = bookingDataRes.rows[0];
+          try {
+            await creditPayout({ providerId: provider_id, bookingId: bkId, bookingPricePaise: parseInt(price_paise, 10) });
+          } catch (payoutErr) {
+            console.error('[webhook] creditPayout failed:', payoutErr.message);
+          }
+        }
+      }
     }
   } else if (eventType === 'payment.failed') {
     const res = await db.query(
@@ -214,7 +233,8 @@ async function processWebhook({ rawBody, signature, event }) {
 }
 
 /**
- * Verifies client-side Razorpay payment completion
+ * Verifies client-side Razorpay payment completion and credits provider payout.
+ * This is the ONLY place creditPayout() is called for online payments.
  */
 async function verifyAndCompletePayment({ bookingId, razorpayOrderId, razorpayPaymentId, razorpaySignature, user }) {
   const isValid = razorpayService.verifyPaymentSignature({
@@ -235,14 +255,28 @@ async function verifyAndCompletePayment({ bookingId, razorpayOrderId, razorpayPa
     [bookingId]
   );
 
+  // Fetch booking to get provider_id and price_paise for payout
+  const bookingRes = await db.query(
+    `SELECT b.provider_id, q.price_paise
+     FROM bookings b JOIN quotes q ON b.quote_id = q.id
+     WHERE b.id = $1`,
+    [bookingId]
+  );
+  const bookingData = bookingRes.rowCount > 0 ? bookingRes.rows[0] : null;
+
   let payment;
   if (paymentRes.rowCount > 0) {
+    const existingPayment = paymentRes.rows[0];
+    // Guard: don't process twice
+    if (existingPayment.status === 'completed') {
+      return { status: 'already_completed', payment: existingPayment };
+    }
     const updateRes = await db.query(
       `UPDATE payments 
        SET status = 'completed', gateway_txn_id = $1, updated_at = NOW() 
        WHERE id = $2 
        RETURNING *`,
-      [razorpayPaymentId, paymentRes.rows[0].id]
+      [razorpayPaymentId, existingPayment.id]
     );
     payment = updateRes.rows[0];
   } else {
@@ -262,9 +296,27 @@ async function verifyAndCompletePayment({ bookingId, razorpayOrderId, razorpayPa
     payment = insertRes.rows[0];
   }
 
+  // Now credit provider payout (90% of booking amount) — only after real payment confirmed
+  let payoutResult = null;
+  if (bookingData && bookingData.provider_id) {
+    try {
+      payoutResult = await creditPayout({
+        providerId: bookingData.provider_id,
+        bookingId,
+        bookingPricePaise: parseInt(bookingData.price_paise, 10)
+      });
+    } catch (payoutErr) {
+      // Log but don't fail the payment response — payout can be retried by admin
+      console.error('[payments] creditPayout failed after verify:', payoutErr.message);
+    }
+  }
+
   return {
     status: 'completed',
-    payment
+    payment,
+    payout: payoutResult
+      ? { payout_paise: payoutResult.payoutPaise, balance_after_paise: payoutResult.newBalance }
+      : null
   };
 }
 

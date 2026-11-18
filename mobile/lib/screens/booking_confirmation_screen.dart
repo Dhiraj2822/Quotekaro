@@ -19,6 +19,21 @@ class BookingConfirmationScreen extends StatelessWidget {
   static const Color accentColor = Color(0xFF548235);
   static const Color warningColor = Color(0xFFBF8F00);
 
+  /// Returns a human-readable payment hint based on the method stored in the booking.
+  String _paymentSummaryText(Map<String, dynamic> bk) {
+    final method = (bk['payment_method'] ?? bk['payment']?['method'] ?? '').toString().toLowerCase();
+    switch (method) {
+      case 'upi':
+        return '💳 Payment method: UPI — tap "Make Payment" below after work is complete to pay online.';
+      case 'card':
+        return '💳 Payment method: Card — tap "Make Payment" below after work is complete to pay online.';
+      case 'cash':
+        return '💵 Payment method: Cash — pay the provider directly upon satisfactory work completion.';
+      default:
+        return '🔒 Pay via Cash, UPI, or Card upon satisfactory work completion.';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isCustomer = role == 'customer';
@@ -432,7 +447,7 @@ class BookingConfirmationScreen extends StatelessWidget {
                         Expanded(
                           child: Text(
                             isCustomer
-                              ? 'Pay via Cash, UPI, or Card upon satisfactory work completion (Module 6).'
+                              ? _paymentSummaryText(booking)
                               : 'Platform commission (10%) automatically reconciled upon completion.',
                             style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                           ),

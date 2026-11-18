@@ -286,13 +286,13 @@ describe('Module 6 - Task 4: Booking Completion & Universal Wallet Commission De
     expect(payment.method).toBe('cash');
   });
 
-  it('Scenario C Part 2 (Digital/UPI): Credits 90% payout (retaining 10% platform commission) to provider wallet on digital payment completion', async () => {
+  it('Scenario C Part 2 (Digital/UPI): Deducts same 10% commission at job completion; payout credited later when customer pays', async () => {
     const { bookingId } = createTestBooking({ pricePaise: 40000 }); // ₹400 job
 
-    // Customer paid via UPI
+    // Payment record is PENDING (method preference stored at quote acceptance — customer hasn't paid yet)
     memDb.public.none(`
       INSERT INTO payments (booking_id, amount_paise, method, gateway_txn_id, status)
-      VALUES ('${bookingId}', 40000, 'upi', 'pay_digital_test_123', 'completed');
+      VALUES ('${bookingId}', 40000, 'upi', NULL, 'pending');
     `);
 
     // Provider completes job
@@ -304,22 +304,30 @@ describe('Module 6 - Task 4: Booking Completion & Universal Wallet Commission De
     expect(res.status).toBe(200);
     expect(res.body.booking.status).toBe('completed');
 
-    // Commission verification: 10% of 40000 = 4000 paise commission, 36000 paise payout credited
-    expect(res.body.wallet_deduction.commission_paise).toBe(4000);
-    expect(res.body.wallet_deduction.amount_paise).toBe(36000);
-    expect(res.body.wallet_deduction.balance_after_paise).toBe(86000); // 50000 + 36000
+    // For online/UPI: same 10% commission deducted at job completion (same as cash).
+    // 90% payout is credited LATER in payments.service.verifyAndCompletePayment() after customer pays.
+    expect(res.body.wallet_deduction.commission_paise).toBe(4000); // 10% of 40000
+    expect(res.body.wallet_deduction.amount_paise).toBe(-4000); // deducted from wallet
+    expect(res.body.wallet_deduction.balance_after_paise).toBe(46000); // 50000 - 4000
 
-    const ledgerRows = memDb.public.many(`
+    // Ledger entry created for commission deduction
+    const ledgerRows = memDb.public.query(`
       SELECT * FROM wallet_ledger WHERE provider_id = '${providerProfileId}'
     `);
-    expect(ledgerRows.length).toBe(1);
-    expect(ledgerRows[0].entry_type).toBe('payout');
-    expect(ledgerRows[0].amount_paise).toBe(36000);
-    expect(ledgerRows[0].balance_after_paise).toBe(86000);
+    expect(ledgerRows.rows.length).toBe(1);
+    expect(ledgerRows.rows[0].entry_type).toBe('commission_deduction');
+    expect(ledgerRows.rows[0].amount_paise).toBe(-4000);
+
+    // Payment record should still be PENDING (customer needs to pay via PaymentScreen)
+    const paymentRows = memDb.public.query(`
+      SELECT * FROM payments WHERE booking_id = '${bookingId}'
+    `);
+    expect(paymentRows.rows.length).toBeGreaterThan(0);
+    expect(paymentRows.rows[0].status).toBe('pending');
   });
 
-  it('Scenario C Equality Gate: Asserts 10% commission is identical across cash and digital payments', async () => {
-    // 1. Cash run
+  it('Scenario C Equality Gate: 10% commission deducted identically for both cash and online at job completion', async () => {
+    // 1. Cash run — commission deducted immediately on job completion
     const bookingCash = createTestBooking({ pricePaise: 60000 });
     memDb.public.none(`
       INSERT INTO payments (booking_id, amount_paise, method, gateway_txn_id, status)
@@ -334,11 +342,11 @@ describe('Module 6 - Task 4: Booking Completion & Universal Wallet Commission De
     memDb.public.none(`DELETE FROM wallet_ledger;`);
     memDb.public.none(`UPDATE provider_profiles SET wallet_balance_paise = 50000 WHERE id = '${providerProfileId}';`);
 
-    // 2. Digital run
+    // 2. Digital/UPI run — same 10% commission deducted at job completion
     const bookingDigital = createTestBooking({ pricePaise: 60000 });
     memDb.public.none(`
       INSERT INTO payments (booking_id, amount_paise, method, gateway_txn_id, status)
-      VALUES ('${bookingDigital.bookingId}', 60000, 'upi', 'pay_123', 'completed');
+      VALUES ('${bookingDigital.bookingId}', 60000, 'upi', NULL, 'pending');
     `);
     const resDigital = await request(app)
       .post(`/api/v1/bookings/${bookingDigital.bookingId}/complete`)
@@ -349,13 +357,18 @@ describe('Module 6 - Task 4: Booking Completion & Universal Wallet Commission De
     expect(resCash.body.wallet_deduction.commission_paise).toBe(resDigital.body.wallet_deduction.commission_paise);
     expect(resCash.body.wallet_deduction.commission_paise).toBe(6000); // 10% of 60000
 
-    // Cash payment: Provider collected 100% cash from customer, platform deducts 10% from wallet
+    // Both deduct 10% from provider wallet at job completion
     expect(resCash.body.wallet_deduction.amount_paise).toBe(-6000);
     expect(resCash.body.wallet_deduction.balance_after_paise).toBe(44000); // 50000 - 6000
 
-    // Digital payment: Platform collected 100% online, platform credits 90% payout to provider wallet
-    expect(resDigital.body.wallet_deduction.amount_paise).toBe(54000); // 60000 - 6000
-    expect(resDigital.body.wallet_deduction.balance_after_paise).toBe(104000); // 50000 + 54000
+    expect(resDigital.body.wallet_deduction.amount_paise).toBe(-6000);
+    expect(resDigital.body.wallet_deduction.balance_after_paise).toBe(44000); // 50000 - 6000
+
+    // Digital job: payment record still PENDING (customer hasn't paid yet — payout credited after they pay)
+    const digitalPayment = memDb.public.query(`
+      SELECT * FROM payments WHERE booking_id = '${bookingDigital.bookingId}'
+    `);
+    expect(digitalPayment.rows[0].status).toBe('pending');
   });
 
   it('Threshold Check: Automatically flips is_available to false when balance drops below 10000 paise (₹100)', async () => {

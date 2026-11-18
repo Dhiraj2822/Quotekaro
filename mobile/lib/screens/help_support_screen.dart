@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'support_chatbot_screen.dart';
+import 'terms_privacy_screen.dart';
 
 class HelpSupportScreen extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -197,6 +198,28 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
             ],
           ),
 
+          const SizedBox(height: 16),
+
+          // Legal & Compliance Link
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            child: ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFFEFF6FF),
+                child: Icon(Icons.shield_outlined, color: primaryColor, size: 22),
+              ),
+              title: const Text('Privacy Policy & Terms of Service', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: primaryColor)),
+              subtitle: const Text('DPDP Act 2023 · Grievance Redressal · 30-Day Warranty', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+              trailing: const Icon(Icons.chevron_right, size: 20, color: Color(0xFF94A3B8)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TermsPrivacyScreen()),
+                );
+              },
+            ),
+          ),
+
           const SizedBox(height: 24),
 
           // Frequently Asked Questions
@@ -242,6 +265,28 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                     ),
                   ),
                 )),
+
+          const SizedBox(height: 16),
+
+          // Legal & Compliance Link
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            child: ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFFEFF6FF),
+                child: Icon(Icons.shield_outlined, color: primaryColor, size: 22),
+              ),
+              title: const Text('Privacy Policy & Terms of Service', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: primaryColor)),
+              subtitle: const Text('DPDP Act 2023 · Grievance Redressal · 30-Day Warranty', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+              trailing: const Icon(Icons.chevron_right, size: 20, color: Color(0xFF94A3B8)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TermsPrivacyScreen()),
+                );
+              },
+            ),
+          ),
 
           const SizedBox(height: 24),
         ],

@@ -1102,6 +1102,92 @@ class ApiService {
     );
   }
 
+  /// Request Email OTP
+  static Future<Map<String, dynamic>> requestEmailOtp(String email) async {
+    final url = Uri.parse('$baseUrl/auth/email/otp/request');
+    final response = await client.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email.trim().toLowerCase()}),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return data;
+    }
+    throw Exception(data['error']?['message'] ?? 'Failed to send verification email');
+  }
+
+  /// Verify Email OTP
+  static Future<Map<String, dynamic>> verifyEmailOtp({
+    required String email,
+    required String otp,
+    required String role,
+  }) async {
+    final url = Uri.parse('$baseUrl/auth/email/otp/verify');
+    final response = await client.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email.trim().toLowerCase(),
+        'otp': otp.trim(),
+        'role': role,
+      }),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      currentToken = data['token'];
+      currentUser = data['user'];
+      return data;
+    }
+    throw Exception(data['error']?['message'] ?? 'Invalid verification code');
+  }
+
+  /// Link mobile number to an authenticated profile
+  static Future<Map<String, dynamic>> linkPhoneNumber(String phoneNumber) async {
+    final url = Uri.parse('$baseUrl/auth/profile/link-phone');
+    final response = await client.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $currentToken',
+      },
+      body: jsonEncode({'phone_number': phoneNumber.trim()}),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (currentUser != null && data['user'] != null) {
+        currentUser!['phone_number'] = data['user']['phone_number'];
+        currentUser!['is_phone_verified'] = true;
+      }
+      return data;
+    }
+    throw Exception(data['error']?['message'] ?? 'Failed to link phone number');
+  }
+
+  /// Get legal privacy policy
+  static Future<Map<String, dynamic>> getPrivacyPolicy() async {
+    try {
+      final url = Uri.parse('$baseUrl/legal/privacy');
+      final response = await client.get(url, headers: {'Content-Type': 'application/json'});
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (_) {}
+    return {};
+  }
+
+  /// Get terms of service
+  static Future<Map<String, dynamic>> getTermsOfService() async {
+    try {
+      final url = Uri.parse('$baseUrl/legal/terms');
+      final response = await client.get(url, headers: {'Content-Type': 'application/json'});
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (_) {}
+    return {};
+  }
+
   static void logout() {
     currentToken = null;
     currentUser = null;

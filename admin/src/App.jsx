@@ -341,29 +341,29 @@ function App() {
     setLoginError('');
   };
 
-  // Check Backend Health and fetch live data
+  // Check Backend Health (always, even before login)
   useEffect(() => {
     fetch(`${API_ROOT_URL}/health`)
       .then((res) => res.json())
-      .then((data) => {
-        setBackendHealth({ status: 'online', message: 'All systems operational' });
-        fetchLiveProviders();
-        fetchLiveDisputes();
-        fetchLiveAnalytics();
-      })
-      .catch(() => {
-        setBackendHealth({ status: 'offline', message: 'Service unavailable' });
-      });
+      .then(() => setBackendHealth({ status: 'online', message: 'All systems operational' }))
+      .catch(() => setBackendHealth({ status: 'offline', message: 'Service unavailable' }));
   }, []);
 
+  // Fetch live data only after admin is authenticated
+  useEffect(() => {
+    if (!adminToken) return;
+    fetchLiveProviders(adminToken);
+    fetchLiveDisputes(adminToken);
+    fetchLiveAnalytics(adminToken);
+  }, [adminToken]);
+
   // Fetch providers from live backend if online
-  const fetchLiveProviders = async () => {
+  const fetchLiveProviders = async (token = adminToken) => {
+    if (!token) return;
     try {
       setLoading(true);
       const res = await fetch(`${API_BASE_URL}/admin/providers`, {
-        headers: {
-          'Authorization': `Bearer ${adminToken}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
@@ -379,12 +379,11 @@ function App() {
   };
 
   // Fetch disputes from live backend if online
-  const fetchLiveDisputes = async () => {
+  const fetchLiveDisputes = async (token = adminToken) => {
+    if (!token) return;
     try {
       const res = await fetch(`${API_BASE_URL}/admin/disputes`, {
-        headers: {
-          'Authorization': `Bearer ${adminToken}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
@@ -398,13 +397,12 @@ function App() {
   };
 
   // Fetch analytics from live backend if online
-  const fetchLiveAnalytics = async () => {
+  const fetchLiveAnalytics = async (token = adminToken) => {
+    if (!token) return;
     try {
       setLoading(true);
       const res = await fetch(`${API_BASE_URL}/admin/analytics`, {
-        headers: {
-          'Authorization': `Bearer ${adminToken}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();

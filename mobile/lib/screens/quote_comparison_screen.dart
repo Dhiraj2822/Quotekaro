@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'booking_confirmation_screen.dart';
+import 'payment_screen.dart';
 
 class QuoteComparisonScreen extends StatefulWidget {
   final Map<String, dynamic> job;
@@ -245,7 +246,7 @@ class _QuoteComparisonScreenState extends State<QuoteComparisonScreen> {
         ),
       );
 
-      // Navigate to Booking Confirmation screen per 06_UIUX_SPEC.md §2.5
+      // Navigate according to selected payment method
       final enrichedBooking = Map<String, dynamic>.from(booking);
       enrichedBooking['job'] ??= widget.job;
       enrichedBooking['provider'] ??= quote['provider'] ?? quote;
@@ -253,15 +254,28 @@ class _QuoteComparisonScreenState extends State<QuoteComparisonScreen> {
       enrichedBooking['eta_minutes'] ??= quote['eta_minutes'];
       enrichedBooking['payment_method'] = selectedMethod; // Store selected payment method
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => BookingConfirmationScreen(
-            booking: enrichedBooking,
-            role: 'customer',
+      if (selectedMethod == 'upi' || selectedMethod == 'card') {
+        // Direct customer to PaymentScreen for instant online checkout via UPI/Card
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PaymentScreen(
+              booking: enrichedBooking,
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        // Cash payment — go directly to BookingConfirmationScreen with Security PIN
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BookingConfirmationScreen(
+              booking: enrichedBooking,
+              role: 'customer',
+            ),
+          ),
+        );
+      }
     } catch (err) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

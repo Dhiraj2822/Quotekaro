@@ -77,6 +77,26 @@ export default function BookingsManagementView({ adminToken, showToast }) {
     showToast(`Booking ${bookingId} status updated to ${newStatus}`, 'success');
   };
 
+  const handleAdminConfirmPayment = async (bookingId) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/bookings/${bookingId}/payment`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (res.ok) {
+        setBookings(bookings.map((b) => (b.id === bookingId ? { ...b, payment_status: 'completed' } : b)));
+        showToast(`Payment verified & confirmed for booking ${bookingId.slice(0, 8)}`, 'success');
+      } else {
+        showToast('Failed to confirm payment', 'error');
+      }
+    } catch (e) {
+      showToast('Network error confirming payment', 'error');
+    }
+  };
+
   const filtered = filterStatus === 'all' ? bookings : bookings.filter((b) => b.status === filterStatus);
 
   const getStatusColor = (status) => {
@@ -132,6 +152,7 @@ export default function BookingsManagementView({ adminToken, showToast }) {
               <th style={{ padding: '12px 16px', fontWeight: 600 }}>Assigned Pro</th>
               <th style={{ padding: '12px 16px', fontWeight: 600 }}>OTPs (Start / End)</th>
               <th style={{ padding: '12px 16px', fontWeight: 600 }}>Amount</th>
+              <th style={{ padding: '12px 16px', fontWeight: 600 }}>Payment</th>
               <th style={{ padding: '12px 16px', fontWeight: 600 }}>Status</th>
               <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'right' }}>Actions</th>
             </tr>
@@ -169,6 +190,61 @@ export default function BookingsManagementView({ adminToken, showToast }) {
                   </td>
                   <td style={{ padding: '14px 16px', fontWeight: 700 }}>
                     ₹{Math.round((b.total_price_paise || b.quote_price_paise || 49900) / 100)}
+                  </td>
+                  <td style={{ padding: '14px 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <span style={{
+                        backgroundColor: '#F1F5F9',
+                        color: '#334155',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: 700
+                      }}>
+                        {(b.payment_method || 'CASH').toUpperCase()}
+                      </span>
+                      {b.payment_status === 'completed' ? (
+                        <span style={{
+                          backgroundColor: '#DCFCE7',
+                          color: '#15803D',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: 600
+                        }}>
+                          PAID
+                        </span>
+                      ) : (
+                        <span style={{
+                          backgroundColor: '#FEF3C7',
+                          color: '#B45309',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: 600
+                        }}>
+                          PENDING
+                        </span>
+                      )}
+                    </div>
+                    {b.payment_method !== 'cash' && b.payment_status === 'pending' && (
+                      <button
+                        onClick={() => handleAdminConfirmPayment(b.id)}
+                        style={{
+                          marginTop: '4px',
+                          padding: '2px 6px',
+                          fontSize: '10px',
+                          borderRadius: '4px',
+                          border: '1px solid #F59E0B',
+                          background: '#FFFBEB',
+                          color: '#B45309',
+                          cursor: 'pointer',
+                          fontWeight: 600
+                        }}
+                      >
+                        ✓ Confirm Payment
+                      </button>
+                    )}
                   </td>
                   <td style={{ padding: '14px 16px' }}>
                     <span style={{

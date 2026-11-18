@@ -19,16 +19,24 @@ class BookingConfirmationScreen extends StatelessWidget {
   static const Color accentColor = Color(0xFF548235);
   static const Color warningColor = Color(0xFFBF8F00);
 
-  /// Returns a human-readable payment hint based on the method stored in the booking.
+  /// Returns a human-readable payment hint based on the method and status stored in the booking.
   String _paymentSummaryText(Map<String, dynamic> bk) {
     final method = (bk['payment_method'] ?? bk['payment']?['method'] ?? '').toString().toLowerCase();
+    final payStatus = (bk['payment_status'] ?? bk['payment']?['status'] ?? '').toString().toLowerCase();
+
+    if (payStatus == 'completed') {
+      return method == 'cash'
+          ? '💵 Cash Payment: Collected upon work completion.'
+          : '💳 Online Payment: PAID & Secured. Escrow payout will release upon work completion.';
+    }
+
     switch (method) {
       case 'upi':
-        return '💳 Payment method: UPI — tap "Make Payment" below after work is complete to pay online.';
+        return '💳 Payment method: UPI (Pending) — tap "Make Payment" below to complete online checkout.';
       case 'card':
-        return '💳 Payment method: Card — tap "Make Payment" below after work is complete to pay online.';
+        return '💳 Payment method: Card (Pending) — tap "Make Payment" below to complete online checkout.';
       case 'cash':
-        return '💵 Payment method: Cash — pay the provider directly upon satisfactory work completion.';
+        return '💵 Payment method: Cash on Completion — pay the provider directly after satisfactory work.';
       default:
         return '🔒 Pay via Cash, UPI, or Card upon satisfactory work completion.';
     }

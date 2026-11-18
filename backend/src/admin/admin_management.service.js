@@ -108,13 +108,18 @@ async function getAdminBookings({ status, category, limit = 50, offset = 0 }) {
         c.name AS customer_name, c.phone_number AS customer_phone,
         pu.name AS provider_name, pu.phone_number AS provider_phone,
         pp.id AS provider_id,
-        q.price_paise AS quote_price_paise
+        q.price_paise AS quote_price_paise,
+        p.method AS payment_method,
+        p.status AS payment_status,
+        p.gateway_txn_id AS payment_txn_id,
+        p.amount_paise AS payment_amount_paise
       FROM bookings b
       JOIN jobs j ON b.job_id = j.id
       JOIN users c ON b.customer_id = c.id
       LEFT JOIN provider_profiles pp ON b.provider_id = pp.id
       LEFT JOIN users pu ON pp.user_id = pu.id
       LEFT JOIN quotes q ON b.quote_id = q.id
+      LEFT JOIN payments p ON p.booking_id = b.id
       WHERE 1=1
     `;
     const params = [];
@@ -143,6 +148,8 @@ async function getAdminBookings({ status, category, limit = 50, offset = 0 }) {
       provider_name: 'Ramesh Plumber',
       provider_phone: '+919999900031',
       total_price_paise: 180000,
+      payment_method: 'upi',
+      payment_status: 'completed',
       scheduled_at: '2026-09-17T14:00:00Z',
       completed_at: '2026-09-17T16:30:00Z',
       created_at: '2026-09-17T12:00:00Z'
@@ -158,6 +165,8 @@ async function getAdminBookings({ status, category, limit = 50, offset = 0 }) {
       provider_name: 'Suresh Electrician',
       provider_phone: '+919999900001',
       total_price_paise: 95000,
+      payment_method: 'upi',
+      payment_status: 'pending',
       scheduled_at: '2026-09-18T10:00:00Z',
       completed_at: null,
       created_at: '2026-09-18T08:30:00Z'
@@ -173,6 +182,8 @@ async function getAdminBookings({ status, category, limit = 50, offset = 0 }) {
       provider_name: 'Ramesh Plumber',
       provider_phone: '+919999900002',
       total_price_paise: 59900,
+      payment_method: 'cash',
+      payment_status: 'pending',
       scheduled_at: '2026-09-19T11:00:00Z',
       completed_at: null,
       created_at: '2026-09-18T14:00:00Z'
@@ -192,6 +203,53 @@ async function reassignBookingProvider(bookingId, newProviderId) {
     if (res && res.rows && res.rows[0]) return res.rows[0];
   } catch (err) { }
   return { id: bookingId, provider_id: newProviderId, status: 'confirmed' };
+}
+
+/**
+ * Admin manually confirms or verifies payment for a booking
+ */
+async function adminConfirmPayment(bookingId) {
+  try {
+    const paymentRes = await db.query(
+      'SELECT * FROM payments WHERE booking_id = $1',
+      [bookingId]
+    );
+    if (paymentRes.rowCount > 0) {
+      const payment = paymentRes.rows[0];
+      await db.query(
+        `UPDATE payments SET status = 'completed', gateway_txn_id = COALESCE(gateway_txn_id, 'admin_verified'), updated_at = NOW() WHERE id = $1`,
+        [payment.id]
+      );
+    } else {
+      const bRes = await db.query('SELECT total_price_paise FROM bookings WHERE id = $1', [bookingId]);
+      const amountPaise = bRes.rowCount > 0 ? (bRes.rows[0].total_price_paise || 40000) : 40000;
+      await db.query(
+        `INSERT INTO payments (booking_id, amount_paise, method, gateway_txn_id, status)
+         VALUES ($1, $2, 'upi', 'admin_verified', 'completed')`,
+        [bookingId, amountPaise]
+      );
+    }
+
+    // If booking is already completed, credit provider payout
+    const bookingRes = await db.query(
+      `SELECT b.status, b.provider_id, q.price_paise FROM bookings b JOIN quotes q ON b.quote_id = q.id WHERE b.id = $1`,
+      [bookingId]
+    );
+    if (bookingRes.rowCount > 0 && bookingRes.rows[0].status === 'completed') {
+      const { provider_id, price_paise } = bookingRes.rows[0];
+      const { creditPayout } = require('../wallet/wallet.service');
+      try {
+        await creditPayout({
+          providerId: provider_id,
+          bookingId,
+          bookingPricePaise: parseInt(price_paise, 10)
+        });
+      } catch (_) {}
+    }
+    return { success: true, booking_id: bookingId, payment_status: 'completed' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 }
 
 /**
@@ -253,6 +311,7 @@ module.exports = {
   updateCustomerStatus,
   getAdminBookings,
   reassignBookingProvider,
+  adminConfirmPayment,
   getAdminSubscriptions
 };
 

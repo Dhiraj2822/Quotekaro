@@ -764,22 +764,25 @@ async function completeBooking({ bookingId, afterPhotoUrl = null, beforePhotoUrl
 
   // 5. Update payment record
   // For cash: mark completed immediately (provider already collected cash physically).
-  // For online (UPI/card): keep as pending — customer must initiate payment via PaymentScreen
-  //   AFTER job completion. Provider payout only happens in payments.service.verifyAndCompletePayment().
+  // For online (UPI/card): check if customer has already paid.
   const paymentRes = await db.query(
     'SELECT * FROM payments WHERE booking_id = $1',
     [bookingId]
   );
   let paymentMethod = 'cash';
+  let isOnlinePaymentPaid = false;
   if (paymentRes.rowCount > 0) {
     const payment = paymentRes.rows[0];
     paymentMethod = payment.method || 'cash';
-    // Only auto-complete CASH payments here — online stays pending until customer pays
-    if (paymentMethod === 'cash' && payment.status === 'pending') {
-      await db.query(
-        `UPDATE payments SET status = 'completed', updated_at = NOW() WHERE id = $1`,
-        [payment.id]
-      );
+    if (paymentMethod === 'cash') {
+      if (payment.status === 'pending') {
+        await db.query(
+          `UPDATE payments SET status = 'completed', updated_at = NOW() WHERE id = $1`,
+          [payment.id]
+        );
+      }
+    } else {
+      isOnlinePaymentPaid = (payment.status === 'completed');
     }
   } else {
     // No payment record → treat as cash, create completed cash record
@@ -793,9 +796,9 @@ async function completeBooking({ bookingId, afterPhotoUrl = null, beforePhotoUrl
 
   // 6. Wallet Settlement Logic (BOTH cash and online):
   // - CASH: Provider collected full amount in cash → platform deducts 10% commission from provider's prepaid wallet.
-  // - ONLINE (UPI/card): Platform will collect payment from customer. We STILL deduct 10% commission
-  //   from provider wallet now (same as cash). When customer pays via PaymentScreen,
-  //   verifyAndCompletePayment() credits 90% payout to provider wallet.
+  // - ONLINE (UPI/card): Platform deducts 10% platform commission from provider wallet.
+  //   If customer ALREADY completed online payment, platform immediately credits 90% payout to provider!
+  //   If customer hasn't paid yet, payout will be credited once customer completes payment via PaymentScreen.
   const pricePaise = parseInt(booking.price_paise, 10);
   let walletResult;
   walletResult = await deductCommission({
@@ -803,6 +806,20 @@ async function completeBooking({ bookingId, afterPhotoUrl = null, beforePhotoUrl
     bookingId: booking.id,
     bookingPricePaise: pricePaise
   });
+
+  if (paymentMethod !== 'cash' && isOnlinePaymentPaid) {
+    try {
+      const payoutRes = await creditPayout({
+        providerId: booking.provider_id,
+        bookingId: booking.id,
+        bookingPricePaise: pricePaise
+      });
+      walletResult.payoutPaise = payoutRes.payoutPaise;
+      walletResult.newBalance = payoutRes.newBalance;
+    } catch (payoutErr) {
+      console.error('[completeBooking] creditPayout error:', payoutErr.message);
+    }
+  }
 
   // Restore provider availability after job completion if wallet still sufficient
   if (!walletResult.belowThreshold) {

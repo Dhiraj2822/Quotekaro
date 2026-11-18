@@ -255,9 +255,9 @@ async function verifyAndCompletePayment({ bookingId, razorpayOrderId, razorpayPa
     [bookingId]
   );
 
-  // Fetch booking to get provider_id and price_paise for payout
+  // Fetch booking to get status, provider_id and price_paise for payout
   const bookingRes = await db.query(
-    `SELECT b.provider_id, q.price_paise
+    `SELECT b.id, b.status, b.provider_id, q.price_paise
      FROM bookings b JOIN quotes q ON b.quote_id = q.id
      WHERE b.id = $1`,
     [bookingId]
@@ -296,9 +296,11 @@ async function verifyAndCompletePayment({ bookingId, razorpayOrderId, razorpayPa
     payment = insertRes.rows[0];
   }
 
-  // Now credit provider payout (90% of booking amount) — only after real payment confirmed
+  // Credit provider payout (90% of booking amount) ONLY IF booking has ALREADY been completed.
+  // If customer paid upfront before job is completed, payment is held in escrow and payout is credited
+  // when provider calls completeBooking().
   let payoutResult = null;
-  if (bookingData && bookingData.provider_id) {
+  if (bookingData && bookingData.provider_id && bookingData.status === 'completed') {
     try {
       payoutResult = await creditPayout({
         providerId: bookingData.provider_id,

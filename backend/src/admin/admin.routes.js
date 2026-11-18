@@ -44,6 +44,7 @@ const {
   updateCustomerStatus,
   getAdminBookings,
   reassignBookingProvider,
+  adminConfirmPayment,
   getAdminSubscriptions
 } = require('./admin_management.service');
 const { getAvailableCoupons } = require('../coupons/coupons.service');
@@ -85,6 +86,15 @@ router.patch('/bookings/:id/assign', async (req, res, next) => {
     const { provider_id } = req.body;
     const result = await reassignBookingProvider(req.params.id, provider_id);
     res.status(200).json({ success: true, booking: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/bookings/:id/payment', async (req, res, next) => {
+  try {
+    const result = await adminConfirmPayment(req.params.id);
+    res.status(200).json(result);
   } catch (err) {
     next(err);
   }

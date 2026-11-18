@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import 'booking_confirmation_screen.dart';
 import 'rating_screen.dart';
 
 /**
@@ -285,23 +286,47 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
-              key: const Key('rate_service_button'),
+              key: const Key('booking_details_button'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: accentColor,
+                backgroundColor: primaryColor,
                 minimumSize: const Size(double.infinity, 48),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              icon: const Icon(Icons.star_rate_rounded, color: Colors.white),
+              icon: const Icon(Icons.shield_outlined, color: Colors.white),
               onPressed: () {
-                Navigator.push(
+                Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => RatingScreen(booking: widget.booking),
+                    builder: (_) => BookingConfirmationScreen(
+                      booking: widget.booking,
+                      role: 'customer',
+                    ),
                   ),
                 );
               },
-              label: const Text('Rate Service & Craftsmanship', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              label: const Text('View Booking & Security PIN', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
+            if ((widget.booking['status'] ?? '').toString().toLowerCase() == 'completed') ...[
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                key: const Key('rate_service_button'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentColor,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.star_rate_rounded, color: Colors.white),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => RatingScreen(booking: widget.booking),
+                    ),
+                  );
+                },
+                label: const Text('Rate Service & Craftsmanship', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
             const SizedBox(height: 12),
             OutlinedButton(
               key: const Key('done_button'),

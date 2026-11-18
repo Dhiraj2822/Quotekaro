@@ -358,13 +358,25 @@ class _AiMaintenanceScreenState extends State<AiMaintenanceScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(rec['suggested_service'] ?? 'Scheduled Checkup', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: primaryColor)),
-                              Text('Estimate: ${rec['estimated_price_range']}', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-                            ],
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  rec['suggested_service'] ?? 'Scheduled Checkup',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: primaryColor),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Estimate: ${rec['estimated_price_range']}',
+                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                ),
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           ElevatedButton(
                             onPressed: () {
                               Navigator.push(
@@ -385,7 +397,7 @@ class _AiMaintenanceScreenState extends State<AiMaintenanceScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: accentColor,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                             ),
                             child: const Text('Schedule Now', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),

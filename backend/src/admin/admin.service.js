@@ -32,9 +32,9 @@ async function getProviders({ kyc_status } = {}) {
  * Approve or reject provider KYC
  */
 async function updateProviderKyc(profileId, { kyc_status, rejection_reason }) {
-  // Check if profile exists
+  // Check if profile exists (accepts profile ID or user ID)
   const existingRes = await db.query(
-    `SELECT * FROM provider_profiles WHERE id = $1`,
+    `SELECT * FROM provider_profiles WHERE id = $1 OR user_id = $1`,
     [profileId]
   );
 
@@ -45,15 +45,17 @@ async function updateProviderKyc(profileId, { kyc_status, rejection_reason }) {
     throw error;
   }
 
+  const existingProfile = existingRes.rows[0];
+
   // If rejected, provider cannot remain available
   const updateRes = await db.query(
     `UPDATE provider_profiles
      SET kyc_status = $1,
-         is_available = CASE WHEN $1 = 'rejected' THEN false ELSE is_available END,
+         is_available = CASE WHEN $2 = true THEN false ELSE is_available END,
          updated_at = NOW()
-     WHERE id = $2
+     WHERE id = $3
      RETURNING *`,
-    [kyc_status, profileId]
+    [kyc_status, kyc_status === 'rejected', existingProfile.id]
   );
 
   const updated = updateRes.rows[0];

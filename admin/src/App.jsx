@@ -416,14 +416,18 @@ function App() {
         if (res.ok) {
           const data = await res.json();
           setProviders(prev => prev.map(p => p.id === provider.id ? { ...p, ...data.provider_profile, kyc_status: 'approved' } : p));
-          showToast(`Provider ${provider.user_name} approved successfully!`, 'success');
+          showToast(`Provider ${provider.user_name || provider.phone_number} approved successfully!`, 'success');
+          fetchLiveProviders();
           return;
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error?.message || errData.message || 'Server rejected KYC approval');
         }
       }
 
       // Local state update (test/demo mode)
       setProviders(prev => prev.map(p => p.id === provider.id ? { ...p, kyc_status: 'approved', rejection_reason: null } : p));
-      showToast(`Provider ${provider.user_name} approved! They can now activate availability.`, 'success');
+      showToast(`Provider ${provider.user_name || provider.phone_number} approved!`, 'success');
     } catch (err) {
       showToast(`Approval failed: ${err.message}`, 'error');
     } finally {
@@ -450,16 +454,20 @@ function App() {
         if (res.ok) {
           const data = await res.json();
           setProviders(prev => prev.map(p => p.id === rejectModalProvider.id ? { ...p, ...data.provider_profile, kyc_status: 'rejected', is_available: false } : p));
-          showToast(`Provider ${rejectModalProvider.user_name} rejected. Availability blocked.`, 'warning');
+          showToast(`Provider ${rejectModalProvider.user_name || rejectModalProvider.phone_number} rejected.`, 'warning');
           setRejectModalProvider(null);
           setRejectionReason('');
+          fetchLiveProviders();
           return;
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error?.message || errData.message || 'Server rejected KYC rejection');
         }
       }
 
       // Local state update
       setProviders(prev => prev.map(p => p.id === rejectModalProvider.id ? { ...p, kyc_status: 'rejected', is_available: false, rejection_reason: reason } : p));
-      showToast(`Provider ${rejectModalProvider.user_name} rejected. Availability blocked.`, 'warning');
+      showToast(`Provider ${rejectModalProvider.user_name || rejectModalProvider.phone_number} rejected.`, 'warning');
       setRejectModalProvider(null);
       setRejectionReason('');
     } catch (err) {
@@ -1443,39 +1451,6 @@ function App() {
                       </div>
                     </div>
                   )}
-
-                  <div style={{ marginTop: '12px', borderTop: '1px dashed #E2E8F0', paddingTop: '12px' }}>
-                    <label style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid var(--border-color)',
-                      padding: '6px 12px',
-                      borderRadius: 'var(--radius-btn)',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      color: 'var(--primary)'
-                    }}>
-                      📁 Upload / Replace Document
-                      <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        style={{ display: 'none' }}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = () => {
-                              setPreviewDocUrl(reader.result);
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                      />
-                    </label>
-                  </div>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
